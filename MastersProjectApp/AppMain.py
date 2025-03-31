@@ -37,6 +37,9 @@ DEBUG = True
 #Default / Customisable variables
 arduinoBaudRate = 115200
 WINDOW_NAME = "Sam's Masters Project"
+FLIP_Y_MOTION = True
+FLIP_X_MOTION = False
+
 
 #subclass of QLabel to allow gathering of mouse cursor position from clicks
 class ClickableLabel(QtWidgets.QLabel):
@@ -407,9 +410,13 @@ class MyApp(QtWidgets.QMainWindow):
 
     #send motor x movement command to arduino
     def moveMotorX(self, angle):
+        if FLIP_X_MOTION:
+            angle = angle * -1
         ret = self.messageArduino(AC.COMMAND_MOVE_X, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
 
     def moveMotorY(self, angle):
+        if FLIP_Y_MOTION:
+            angle = angle * -1
         ret = self.messageArduino(AC.COMMAND_MOVE_Y, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
 
     #Called upon each new image when tracking is enabled
