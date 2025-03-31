@@ -404,10 +404,10 @@ class MyApp(QtWidgets.QMainWindow):
 
     #send motor x movement command to arduino
     def moveMotorX(self, angle):
-        ret = self.messageArduino(AC.COMMAND_MOVE_X, angle, 4)
+        ret = self.messageArduino(AC.COMMAND_MOVE_X, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
 
     def moveMotorY(self, angle):
-        ret = self.messageArduino(AC.COMMAND_MOVE_Y, angle, 4)
+        ret = self.messageArduino(AC.COMMAND_MOVE_Y, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
 
     #Continuously tracks current pose in view
     def track(self):
