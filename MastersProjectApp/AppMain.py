@@ -112,7 +112,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.horizontalLayout.addWidget(self.splitter)
         #image label
         self.imageLabel = ClickableLabel(self.splitter)
-        self.imageLabel.setMinimumSize(QtCore.QSize(640, 480))
+        self.imageLabel.setMinimumSize(QtCore.QSize(ImagingThread.imageWidthResized, ImagingThread.imageHeightResized))
         self.imageLabel.setObjectName("ImageView")
         self.horizontalLayout.addWidget(self.splitter)
         #define as main tab
@@ -432,6 +432,8 @@ class ImagingThread(QThread):
     cameraFovY = 56.5
     imageWidth = 1920
     imageHeight = 1080
+    imageWidthResized = 640
+    imageHeightResized = 480
 
     def run(self):
         self.results = None
@@ -455,7 +457,7 @@ class ImagingThread(QThread):
     
     #Convert cv np image to qt label image type
     def cvToLabel(self,image):
-        image = cv.resize(image, (640,480))
+        image = cv.resize(image, (self.imageWidthResized, self.imageHeightResized))
         image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
         image = QImage(image,
                        image.shape[1],
@@ -477,16 +479,16 @@ class ImagingThread(QThread):
     
     @classmethod
     def normedToPx(cls, xyNormed) -> np.ndarray:
-        imgSize = np.array([cls.imageWidth, cls.imageHeight])
+        imgSize = np.array([cls.imageWidthResized, cls.imageHeightResized])
         centerChestPx = xyNormed * imgSize
         return centerChestPx
 
     @classmethod
     def pxToAngle(cls, xyPx) -> np.ndarray:
-        DPPX = cls.cameraFovX / cls.imageWidth
-        DPPY = cls.cameraFovY / cls.imageHeight
-        xPxFromCenter = xyPx[0] - (cls.imageWidth/2)
-        yPxFromCenter = xyPx[1] - (cls.imageHeight/2)
+        DPPX = cls.cameraFovX / cls.imageWidthResized
+        DPPY = cls.cameraFovY / cls.imageHeightResized
+        xPxFromCenter = xyPx[0] - (cls.imageWidthResized/2)
+        yPxFromCenter = xyPx[1] - (cls.imageHeightResized/2)
         xDegFromCenter = xPxFromCenter * DPPX
         yDegFromCenter = yPxFromCenter * DPPY
         return np.array([xDegFromCenter, yDegFromCenter])
