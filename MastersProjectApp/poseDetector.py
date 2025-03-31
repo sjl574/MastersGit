@@ -9,6 +9,10 @@ from mediapipe.tasks.python import vision
 import cv2 as cv
 import numpy as np
 
+import os 
+import sys 
+currentDir = os.path.dirname(os.path.abspath(sys.argv[0])) 
+
 
 class PoseDetector():
     #Static variables
@@ -19,7 +23,7 @@ class PoseDetector():
     #Constructor / Intialiser
     def __init__(self, heavyModel : bool = False):
         #create pose detection instance
-        modelDir = PoseDetector.heavyModelDir if heavyModel else PoseDetector.liteModelDir
+        modelDir = os.path.join(currentDir, PoseDetector.heavyModelDir) if heavyModel else os.path.join(currentDir, PoseDetector.liteModelDir)
         base_options = python.BaseOptions(model_asset_path=modelDir)
         options = vision.PoseLandmarkerOptions(base_options = base_options, output_segmentation_masks = True)
         self.detector = vision.PoseLandmarker.create_from_options(options)
