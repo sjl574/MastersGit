@@ -217,9 +217,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.cameraThread.frame_signal.connect(self.setImage)
 
         #set blank image 
-        self.imageWidth = 640
-        self.imageHeight = 480
-        grey = QPixmap(self.imageWidth, self.imageHeight)
+        grey = QPixmap(ImagingThread.imageWidthResized, ImagingThread.imageHeightResized)
         grey.fill(QColor('darkGray'))
         # set the image image to the grey pixmap
         self.imageLabel.setPixmap(grey)
