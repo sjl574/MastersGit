@@ -1,0 +1,6 @@
+Run following in terminal to open designer
+
+qt5-tools designer
+
+Convert .ui files to .py files by:
+pyuic5 -x uiFile.ui -o pythonFileOut.py
