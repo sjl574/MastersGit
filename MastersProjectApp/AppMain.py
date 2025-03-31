@@ -61,6 +61,8 @@ class MyApp(QtWidgets.QMainWindow):
         #class variables
         self.poseResults = None
         self.ardSerial = None
+        self.xMinAngle = 1
+        self.yMinAngle = 1
         #setup window
         self.setupUi()
         self.show()
@@ -210,6 +212,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.projectileType = "Cylinder"
         self.arduinoConnected = False
         self.tracking = False
+        self.trackingInMotion = False #variable is used to stop tracking function being called multiple times at once
 
         #Threading (for camera)
         self.cameraThread = ImagingThread()
@@ -263,7 +266,9 @@ class MyApp(QtWidgets.QMainWindow):
     def setImage(self,image):
         self.poseResults = self.cameraThread.getResults()
         self.imageLabel.setPixmap(QPixmap.fromImage(image))
-
+        #if tracking is enabled, update motor position each new image 
+        if self.tracking and not self.trackingInMotion:
+            self.track()
 
     def imageClickFunc(self, mouseXY):
         if self.cameraConnected:
@@ -407,17 +412,18 @@ class MyApp(QtWidgets.QMainWindow):
     def moveMotorY(self, angle):
         ret = self.messageArduino(AC.COMMAND_MOVE_Y, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
 
-    #Continuously tracks current pose in view
+    #Called upon each new image when tracking is enabled
     def track(self):
-        while self.tracking:
-            None
-            ###.....
-            ## Need to create some form of loop that
-            #Checks for new results - this func could be called upon signal from imaging thread (if tracking == true)
-            #commands arduino to move, waiting for return signal of confirmation
-            #fire projectile
-
-
+        #Set tracking in motion to say function is occupied
+        self.trackingInMotion = True
+        #only move if angle is big enough to stop constant tiny adjustments
+        xyAngles = self.cameraThread.getChestAngles()
+        if xyAngles[0] > self.xMinAngle:
+            self.moveMotorX(xyAngles[0])
+        if xyAngles[1] > self.yMinAngle:
+            self.moveMotorY(xyAngles[1])
+        #Turn off tracking in motion to allow next track command
+        self.trackingInMotion = False
 
 
 
