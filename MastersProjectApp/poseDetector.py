@@ -9,34 +9,17 @@ from mediapipe.tasks.python import vision
 import cv2 as cv
 import numpy as np
 
-#Define parameters here for singleton
-heavyModel = False
-cameraFovX = 59.34
-cameraFovY = 56.5
-imageWidth = 1920
-imageHeight = 1080
-
 
 class PoseDetector():
     #Static variables
     #model locations
     liteModelDir = 'Models/liteModel.task'
     heavyModelDir = 'Models/heavyModel.task'
-    #Default camera
-    defaultFovX = 59.34
-    defaultFovY = 56.5
-    defaultImageWidth = 1920
-    defaultImageHeight = 1080
 
     #Constructor / Intialiser
-    def __init__(self, heavyModel : bool = False, cameraFovX = None, cameraFovY = None, imageWidth = None, imageHeight = None):
-        #Set defaults if not passed into constructor      
-        self.cameraFovX = PoseDetector.defaultFovX if cameraFovX == None else cameraFovX
-        self.cameraFovY = PoseDetector.defaultFovY if cameraFovY == None else cameraFovY
-        self.imageWidth = PoseDetector.defaultImageWidth if imageWidth == None else imageWidth
-        self.imageHeight = PoseDetector.defaultImageHeight if imageHeight == None else imageHeight
+    def __init__(self, heavyModel : bool = False):
         #create pose detection instance
-        modelDir = PoseDetector.liteModelDir if heavyModel else PoseDetector.heavyModelDir
+        modelDir = PoseDetector.heavyModelDir if heavyModel else PoseDetector.liteModelDir
         base_options = python.BaseOptions(model_asset_path=modelDir)
         options = vision.PoseLandmarkerOptions(base_options = base_options, output_segmentation_masks = True)
         self.detector = vision.PoseLandmarker.create_from_options(options)
@@ -86,42 +69,19 @@ class PoseDetector():
         centerChest = leftChest + ((leftChest-rightChest)/2)
         return centerChest
 
-    #Extract the central chest position in pixels [x,y] from the results
-    def getChestPx(self, results) -> np.ndarray:
-        imgSize = np.array([self.imageWidth, self.imageHeight])
-        chestNormed = self.getChestResults(results)
-        centerChestPx = chestNormed * imgSize
-        return centerChestPx
     
-    #Extract the angle of the central chest position from the camera axis (xDeg,yDeg) from the results
-    def getChestAngle(self, results) -> np.ndarray:
-        chestNormed = self.getChestPx(results)
-        DPPX = self.cameraFovX / self.imageWidth
-        DPPY = self.cameraFovY / self.imageHeight
-        xPxFromCenter = chestNormed[0] - (self.imageWidth/2)
-        yPxFromCenter = chestNormed[1] - (self.imageHeight/2)
-        xDegFromCenter = xPxFromCenter * DPPX
-        yDegFromCenter = yPxFromCenter * DPPY
-        return np.array([xDegFromCenter, yDegFromCenter])
-    
-    #Set Image size different to initial values
-    def setImageSize(self, imageWidth : int, imageHeight : int) -> None:
-        self.imageWidth = imageWidth
-        self.imageHeight = imageHeight
-        return None
-
 #Create "Singleton" instance for importing
-detector = PoseDetector(heavyModel, cameraFovX, cameraFovY, imageWidth, imageHeight)
+detector = PoseDetector()
 
 if __name__ == '__main__':
     cam = cv.VideoCapture(0, cv.CAP_DSHOW)
-    cam.set(cv.CAP_PROP_FRAME_WIDTH, PoseDetector.defaultImageWidth)
-    cam.set(cv.CAP_PROP_FRAME_HEIGHT, PoseDetector.defaultImageHeight)
+    cam.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
+    cam.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)
 
     cv.namedWindow("camera", cv.WINDOW_NORMAL)
     while True:
         ret,img = cam.read()
         res, img = detector.detectAndDraw(img)
-        print(detector.getChestAngle(res))
+        print(detector.getChestResults(res))
         cv.imshow("camera", img)
         cv.waitKey(10)

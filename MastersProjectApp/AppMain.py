@@ -212,7 +212,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.tracking = False
 
         #Threading (for camera)
-        self.cameraThread = MyThread()
+        self.cameraThread = ImagingThread()
         #Attach signal from camera thread to apps update image function
         self.cameraThread.frame_signal.connect(self.setImage)
 
@@ -269,9 +269,11 @@ class MyApp(QtWidgets.QMainWindow):
 
     def imageClickFunc(self, mouseXY):
         if self.cameraConnected:
+            anglesXY = ImagingThread.pxToAngle(mouseXY)
             self.TerminalScroller.append(f"Mouse Clicked at: {mouseXY}")
-            self.moveMotorX(mouseXY[0])
-            self.moveMotorY(mouseXY[1])
+            self.TerminalScroller.append(f"Moving x: {anglesXY[0]}deg, Moving y: {anglesXY[1]}deg...")
+            self.moveMotorX(anglesXY[0])
+            self.moveMotorY(anglesXY[1])
 
     #---------------------BUTTON FUNCTIONS
     def connectArduinoFunc(self):
@@ -361,7 +363,6 @@ class MyApp(QtWidgets.QMainWindow):
         #scale image to correct dims and return
         return image.scaled(self.imageWidth, self.imageHeight)
     
-
     #------ARDUINO COMMANDS
     #Message arduino over serial
     def messageArduino(self, command : int, data : int = 0, expectReplyLen : int = 0, replyTimeOut_s : float = 5.0) -> bytearray:
@@ -388,7 +389,6 @@ class MyApp(QtWidgets.QMainWindow):
             ret = self.ardSerial.read(4)
             self.TerminalScroller.append(f"Message Back: {list(ret)}")
         #return bytes of return value, or None if none
-
         return bytearray(ret)
 
     #send fire projectile command to arduino
@@ -402,15 +402,12 @@ class MyApp(QtWidgets.QMainWindow):
         #fire projectile
         self.messageArduino(AC.COMMAND_FIRE, 6, 4)
 
-
     #send motor x movement command to arduino
     def moveMotorX(self, angle):
-        ret = self.messageArduino(AC.COMMAND_MOVE_X, 4000, 4)
-        print(ret)
+        ret = self.messageArduino(AC.COMMAND_MOVE_X, angle, 4)
 
     def moveMotorY(self, angle):
-        ret = self.messageArduino(AC.COMMAND_MOVE_Y, 5000, 4)
-        print(ret)
+        ret = self.messageArduino(AC.COMMAND_MOVE_Y, angle, 4)
 
     #Continuously tracks current pose in view
     def track(self):
@@ -418,7 +415,7 @@ class MyApp(QtWidgets.QMainWindow):
             None
             ###.....
             ## Need to create some form of loop that
-            #Checks for new results
+            #Checks for new results - this func could be called upon signal from imaging thread (if tracking == true)
             #commands arduino to move, waiting for return signal of confirmation
             #fire projectile
 
@@ -427,13 +424,21 @@ class MyApp(QtWidgets.QMainWindow):
 
 
 #Class for handling camera operation in alt thread
-class MyThread(QThread):
+class ImagingThread(QThread):
+    #Static class variables
     frame_signal = Signal(QImage)
+    heavyModel = False
+    cameraFovX = 59.34
+    cameraFovY = 56.5
+    imageWidth = 1920
+    imageHeight = 1080
 
     def run(self):
         self.results = None
         #connect camera
         self.cam = cv.VideoCapture(MyApp.cameraNum, cv.CAP_DSHOW)
+        self.cam.set(cv.CAP_PROP_FRAME_WIDTH, ImagingThread.imageWidth)
+        self.cam.set(cv.CAP_PROP_FRAME_HEIGHT, ImagingThread.imageHeight)
         #Run camera whilst flag active
         while MyApp.runCamera:
             ret, rawFrame = self.cam.read()
@@ -459,16 +464,38 @@ class MyThread(QThread):
                        QImage.Format_RGB888)
         return image
     
-    #Obtain raw results from last image
+    #Obtain raw results from last image (these are normed pixels)
     def getResults(self):
         return self.results
     
     #obtain chest angle from last image
     def getChestAngles(self):
         if self.results is not None:
-            return detector.getChestAngle(self.results)
+            return self.normedToAngle(detector.getChestResults(self.results))
         else:
             return np.array([0,0])
+    
+    @classmethod
+    def normedToPx(cls, xyNormed) -> np.ndarray:
+        imgSize = np.array([cls.imageWidth, cls.imageHeight])
+        centerChestPx = xyNormed * imgSize
+        return centerChestPx
+
+    @classmethod
+    def pxToAngle(cls, xyPx) -> np.ndarray:
+        DPPX = cls.cameraFovX / cls.imageWidth
+        DPPY = cls.cameraFovY / cls.imageHeight
+        xPxFromCenter = xyPx[0] - (cls.imageWidth/2)
+        yPxFromCenter = xyPx[1] - (cls.imageHeight/2)
+        xDegFromCenter = xPxFromCenter * DPPX
+        yDegFromCenter = yPxFromCenter * DPPY
+        return np.array([xDegFromCenter, yDegFromCenter])
+        
+    @classmethod
+    def normedToAngle(cls, xyNormed) -> np.ndarray:
+        xyPx = cls.normedToPx(xyNormed)
+        xyAngles = cls.pxToAngle(xyPx)
+        return xyAngles
 
 
 if __name__ == "__main__":
