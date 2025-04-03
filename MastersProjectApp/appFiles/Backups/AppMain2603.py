@@ -26,7 +26,7 @@ from PyQt5.QtCore import QThread,pyqtSignal as Signal,pyqtSlot as Slot
 import serial.tools.list_ports
 import cv2 as cv
 import numpy as np
-from poseDetector import detector
+from appFIles.poseDetector import detector
 
 #Toggle debug here to send debug messages to serial
 DEBUG = True

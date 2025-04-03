@@ -17,8 +17,8 @@ currentDir = os.path.dirname(os.path.abspath(sys.argv[0]))
 class PoseDetector():
     #Static variables
     #model locations
-    liteModelDir = 'Models/liteModel.task'
-    heavyModelDir = 'Models/heavyModel.task'
+    liteModelDir = 'appFiles/Models/liteModel.task'
+    heavyModelDir = 'appFiles/Models/heavyModel.task'
 
     #Constructor / Intialiser
     def __init__(self, heavyModel : bool = False):
@@ -78,6 +78,7 @@ class PoseDetector():
 detector = PoseDetector()
 
 if __name__ == '__main__':
+    #Error will form if model paths are not adjusted
     cam = cv.VideoCapture(0, cv.CAP_DSHOW)
     cam.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
     cam.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)

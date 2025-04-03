@@ -27,9 +27,10 @@ import serial.tools.list_ports
 import serial
 import cv2 as cv
 import numpy as np
-from poseDetector import detector
-import arduinoCommands as AC
+from appFiles.poseDetector import detector
+import appFiles.arduinoCommands as AC
 import time
+import json
 
 #Toggle debug here to send debug messages to serial
 DEBUG = True
@@ -55,8 +56,16 @@ class ClickableLabel(QtWidgets.QLabel):
 
 
 class MyApp(QtWidgets.QMainWindow):
-    cameraNum = 0
     runCamera = False
+    jsonDir = 'appFiles/defaultData.json'
+    projectileTypes = ["Cylinder", "Sphere"]
+    settingsDict = {
+        'CameraNum' : 0,
+        'COMPORT' : None,
+        'ProjectileType' : 'Cylinder',
+        'ProjectileRadius' : 10,
+        'ProjectileLength' : 30,
+    }
 
     def __init__(self):
         #init Qt window
@@ -67,6 +76,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.xMinAngle = 1
         self.yMinAngle = 1
         #setup window
+        self.readDefaultsJson()
         self.setupUi()
         self.show()
 
@@ -187,11 +197,6 @@ class MyApp(QtWidgets.QMainWindow):
         self.statusbar.setObjectName("statusbar")
         self.setStatusBar(self.statusbar)
 
-        #Set text fields, ect
-        self.retranslateUi()
-        self.tabWidget.setCurrentIndex(0)
-        QtCore.QMetaObject.connectSlotsByName(self)
-
         #Signal functions
         self.ConnectCameraButton.clicked.connect(self.toggleCamera)
         self.ConnectArduinoButton.clicked.connect(self.connectArduinoFunc)
@@ -202,8 +207,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.imageLabel.clicked.connect(self.imageClickFunc)
 
         #setup Combo lists
-        self.projectileTypes = ["Cylinder", "Sphere"]
-        self.ProjectileTypeCombo.addItems(self.projectileTypes)
+        self.ProjectileTypeCombo.addItems(MyApp.projectileTypes)
         self.updateComCombo()
 
         #Button / Field variables
@@ -228,6 +232,11 @@ class MyApp(QtWidgets.QMainWindow):
         # set the image image to the grey pixmap
         self.imageLabel.setPixmap(grey)
 
+        #Set text fields, ect
+        self.retranslateUi()
+        self.tabWidget.setCurrentIndex(0)
+        QtCore.QMetaObject.connectSlotsByName(self)
+
         #Init message
         self.TerminalScroller.append("Window Booted")
 
@@ -249,6 +258,35 @@ class MyApp(QtWidgets.QMainWindow):
         self.RadiusLabel.setText(_translate(WINDOW_NAME, "Radius"))
         self.LengthLabel.setText(_translate(WINDOW_NAME, "Length"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.SettingsTab), _translate(WINDOW_NAME, "Settings"))
+        #Set current values of Line edits
+        self.CameraNumberLE.setText(str(MyApp.settingsDict['CameraNum']))
+        self.ProjectileLengthLE.setText(str(MyApp.settingsDict['ProjectileLength']))
+        self.ProjectileRadiusLE.setText(str(MyApp.settingsDict['ProjectileRadius']))
+        #set current values of combo boxes
+        if MyApp.settingsDict['COMPORT'] in self.COMPORTS.values():
+            self.ComPortCombo.setCurrentIndex(list(self.COMPORTS.values()).index(MyApp.settingsDict['COMPORT']))
+        self.ProjectileTypeCombo.setCurrentIndex(self.projectileTypes.index(MyApp.settingsDict['ProjectileType']))
+
+
+    #Sets initial values from last application
+    def readDefaultsJson(self):
+        #try open json, may not exist
+        try:
+            with open(MyApp.jsonDir) as defaultsJson:
+                jsonStr = defaultsJson.read()
+        except Exception as e:
+            print(f"Failed reading defaults Json: {e}") 
+            return None
+        #interpret json as python dict and use it to replace app settings
+        MyApp.settingsDict = json.loads(jsonStr)
+        return None
+    
+
+    #write applied settings to a json file
+    def writeDefaultsJson(self):
+        #write settings dict to a json file
+        with open(MyApp.jsonDir, "w") as jsonFile:
+            jsonFile.write(json.dumps(MyApp.settingsDict))
 
 
     def toggleCamera(self):        
@@ -332,29 +370,32 @@ class MyApp(QtWidgets.QMainWindow):
         #Get camera Number (only accepts number if entry is all digits)
         holdval = self.CameraNumberLE.text()
         if not any(not char.isdigit() for char in holdval) and len(holdval) > 0:
-            MyApp.cameraNum = int(holdval)
-        self.CameraNumberLE.clear()
+            MyApp.settingsDict['CameraNum'] = int(holdval)
+        self.CameraNumberLE.setText(holdval)
         #Get radius
         holdval = self.ProjectileRadiusLE.text()
         if not any(not char.isdigit() for char in holdval) and len(holdval) > 0:
-            self.projectileRadius = int(holdval)
-        self.ProjectileRadiusLE.clear()
+            MyApp.settingsDict['ProjectileRadius'] = int(holdval)
+        self.ProjectileRadiusLE.setText(holdval)
         #Get length
         holdval = self.ProjectileLengthLE.text()
         if not any(not char.isdigit() for char in holdval) and len(holdval) > 0:
-            self.projectileLength = int(holdval)
-        self.ProjectileLengthLE.clear()
+            MyApp.settingsDict['ProjectileLength'] = int(holdval)
+        self.ProjectileLengthLE.setText(holdval)
         #set Projectile Shape
-        self.projectileType = self.projectileTypes[self.ProjectileTypeCombo.currentIndex()]
+        MyApp.settingsDict['ProjectileType'] = self.projectileTypes[self.ProjectileTypeCombo.currentIndex()]
         #Set arduino comport
-        self.COMPORT = self.COMPORTS[self.ComPortCombo.currentText()]
+        MyApp.settingsDict['COMPORT'] = self.COMPORTS[self.ComPortCombo.currentText()]
+        #Save settings to file
+        self.writeDefaultsJson()
         #DEBUG serial output
         self.TerminalScroller.append(f"Settings Applied:")
-        self.TerminalScroller.append(f"Camera: {str(MyApp.cameraNum)}")
-        self.TerminalScroller.append(f"Ard Com: {self.COMPORT}")
-        self.TerminalScroller.append(f"Proj Type: {self.projectileType}")
-        self.TerminalScroller.append(f"Proj Len: {str(self.projectileLength)}")
-        self.TerminalScroller.append(f"Proj Rad: {str(self.projectileRadius)}")
+        self.TerminalScroller.append(f"Camera: {str(MyApp.settingsDict['CameraNum'])}")
+        self.TerminalScroller.append(f"Ard Com: {MyApp.settingsDict['COMPORT']}")
+        self.TerminalScroller.append(f"Proj Type: {MyApp.settingsDict['ProjectileType']}")
+        self.TerminalScroller.append(f"Proj Len: {str(MyApp.settingsDict['ProjectileLength'])}")
+        self.TerminalScroller.append(f"Proj Rad: {str(MyApp.settingsDict['ProjectileRadius'])}")
+
 
     #Other Functions
 
