@@ -28,6 +28,7 @@ import serial
 import cv2 as cv
 import numpy as np
 from appFiles.poseDetector import detector
+from appFiles.CommunicationThread import ArduinoComs
 import appFiles.arduinoCommands as AC
 import time
 import json
@@ -75,6 +76,8 @@ class MyApp(QtWidgets.QMainWindow):
         self.ardSerial = None
         self.xMinAngle = 1
         self.yMinAngle = 1
+        self.xMotion = False
+        self.yMotion = False
         #setup window
         self.readDefaultsJson()
         self.setupUi()
@@ -221,9 +224,14 @@ class MyApp(QtWidgets.QMainWindow):
         self.tracking = False
         self.trackingInMotion = False #variable is used to stop tracking function being called multiple times at once
 
-        #Threading (for camera)
+        #Threading
+        #Arduino comms thread
+        self.ardThread = ArduinoComs()
+        self.ardThread.recieved_signal.connect(self.recieveArdComs)
+        self.ardThread.debug_signal.connect(self.terminalDebugger)
+
+        #Camera Thread
         self.cameraThread = ImagingThread()
-        #Attach signal from camera thread to apps update image function
         self.cameraThread.frame_signal.connect(self.setImage)
 
         #set blank image 
@@ -266,6 +274,11 @@ class MyApp(QtWidgets.QMainWindow):
         if MyApp.settingsDict['COMPORT'] in self.COMPORTS.values():
             self.ComPortCombo.setCurrentIndex(list(self.COMPORTS.values()).index(MyApp.settingsDict['COMPORT']))
         self.ProjectileTypeCombo.setCurrentIndex(self.projectileTypes.index(MyApp.settingsDict['ProjectileType']))
+
+
+    #Print debug messages to app terminak
+    def terminalDebugger(self, message : str):
+        self.TerminalScroller.append(message)
 
 
     #Sets initial values from last application
@@ -311,6 +324,7 @@ class MyApp(QtWidgets.QMainWindow):
         if self.tracking and not self.trackingInMotion:
             self.track()
 
+
     def imageClickFunc(self, mouseXY):
         if self.cameraConnected:
             anglesXY = ImagingThread.pxToAngle(mouseXY)
@@ -319,12 +333,13 @@ class MyApp(QtWidgets.QMainWindow):
             self.moveMotorX(anglesXY[0])
             self.moveMotorY(anglesXY[1])
 
+
     #---------------------BUTTON FUNCTIONS
     def connectArduinoFunc(self):
         if not self.arduinoConnected:
             self.TerminalScroller.append("Attempting Arduino Serial Connection...")
             try:
-                self.ardSerial = serial.Serial(self.settingsDict['COMPORT'], arduinoBaudRate, timeout = 1, xonxoff=False, rtscts=False, dsrdtr=False)
+                self.startArduinoComms()
                 self.TerminalScroller.append(f"Arduino Connected Successfully!")
                 self.ConnectArduinoButton.setText(QtCore.QCoreApplication.translate("self", "Disconnect Arduino"))
                 self.arduinoConnected = True
@@ -333,16 +348,18 @@ class MyApp(QtWidgets.QMainWindow):
         else:
             self.TerminalScroller.append("Disconnecting Arduino Serial Connection...")
             try: 
-                self.ardSerial.close()
+                self.stopArduinoComs()
                 self.TerminalScroller.append(f"Arduino disconnected!")
                 self.ConnectArduinoButton.setText(QtCore.QCoreApplication.translate("self", "Connect Arduino"))
                 self.arduinoConnected = False
             except Exception as e:
                 self.TerminalScroller.append(f"Failed to disconnect Arduino!! \nError: {e}")
 
+
     def fireProjectButtonFunc(self):
         self.TerminalScroller.append("Firing Projectile!")
         self.fireProjectile()
+
 
     def toggleTrackingFunc(self):
         if not self.tracking:
@@ -353,6 +370,7 @@ class MyApp(QtWidgets.QMainWindow):
             self.TerminalScroller.append("Stopping Tracking")
             self.ToggleTrackingButton.setText(QtCore.QCoreApplication.translate("self", "Start Tracking"))
             self.tracking = False         
+
 
     def updateComCombo(self):
         #get all connected comports
@@ -399,45 +417,32 @@ class MyApp(QtWidgets.QMainWindow):
 
     #Other Functions
 
-    #convert cv image to be readable by qt
-    def cvImageToQt(self, image):
-        #convert to rgb (cv works in bgr)
-        image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
-        #image size
-        h, w, d = image.shape
-        #convert to qtImage type
-        image = QtGui.QImage(image.data, w, h, w*d, QtGui.QImage.Format_RGB888)
-        #scale image to correct dims and return
-        return image.scaled(self.imageWidth, self.imageHeight)
+    #------ARDUINO COMMANDS
+
+    def startArduinoComms(self):
+        ArduinoComs.running = True
+        self.ardThread.connect(self.settingsDict['COMPORT'], arduinoBaudRate)
+        self.ardThread.start()
+
+
+    def stopArduinoComs(self):
+        ArduinoComs.running = False
+        time.sleep(0.1) #give time for thread to end
+        self.ardThread.disconnect()
     
 
-    #------ARDUINO COMMANDS
-    #Message arduino over serial
-    def messageArduino(self, command : int, data : int = 0, expectReplyLen : int = 0, replyTimeOut_s : float = 5.0) -> bytearray:
-        #inform of error, ret 0 if arduino not connected
-        if not self.arduinoConnected:
-            self.TerminalScroller.append(f"Failed To Send Arduino Message: Connection Not Established")
-            return 0
-        #Arduino connected...
-        #clear any data in current serial buffers
-        self.ardSerial.read_all()
-        self.ardSerial.flush()
-        #combine command byte and data into into serial of bytes
-        message = bytearray()
-        message.extend(command.to_bytes(4, 'little', signed = True))
-        message.extend(data.to_bytes(4, 'little', signed = True))
-        if DEBUG:
-            self.TerminalScroller.append(f"Message Sent: {list(message)}")
-        self.ardSerial.write(message)
-        ret = []
-        #Gather reply if expecting
-        self.ardSerial.timeout = replyTimeOut_s
-        if expectReplyLen:
-            time.sleep(0.1)
-            ret = self.ardSerial.read(4)
-            self.TerminalScroller.append(f"Message Back: {list(ret)}")
-        #return bytes of return value, or None if none
-        return bytearray(ret)
+    def messageArduino(self, command, value, expectReplyLen = 0, replyTimeOut_s = 5.0):
+        ArduinoComs.messageQueue.put([command, value, expectReplyLen, replyTimeOut_s])
+
+
+    def recieveArdComs(self, message : list):
+        command = message[0]
+        value = message[1]
+        if command == AC.COMMAND_MOVE_X:
+            self.xMotion = False
+        if command == AC.COMMAND_MOVE_Y:
+            self.yMotion = False
+
 
     #send fire projectile command to arduino
     def fireProjectile(self):
@@ -452,14 +457,28 @@ class MyApp(QtWidgets.QMainWindow):
 
     #send motor x movement command to arduino
     def moveMotorX(self, angle):
+        #Dont send signal if already in / awaiting motion
+        if self.xMotion:
+            return
+        #flip direction if required
         if FLIP_X_MOTION:
             angle = angle * -1
+        #Send arduino command
         ret = self.messageArduino(AC.COMMAND_MOVE_X, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
+        self.xMotion = True #Flag motors in motion
+
 
     def moveMotorY(self, angle):
+        #Dont send signal if already in / awaiting motion
+        if self.yMotion:
+            return
+        #Flip direction if required
         if FLIP_Y_MOTION:
             angle = angle * -1
+        #send arduino command
         ret = self.messageArduino(AC.COMMAND_MOVE_Y, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
+        self.yMotion = True #flag motors in motion
+        
 
     #Called upon each new image when tracking is enabled
     def track(self):
@@ -488,6 +507,7 @@ class ImagingThread(QThread):
     imageWidthResized = 640
     imageHeightResized = 480
 
+    #Function override (Run thread - this will be run upon class.start())
     def run(self):
         self.results = None
         #connect camera
