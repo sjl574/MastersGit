@@ -324,7 +324,7 @@ class MyApp(QtWidgets.QMainWindow):
         if not self.arduinoConnected:
             self.TerminalScroller.append("Attempting Arduino Serial Connection...")
             try:
-                self.ardSerial = serial.Serial(self.COMPORT, arduinoBaudRate, timeout = 1, xonxoff=False, rtscts=False, dsrdtr=False)
+                self.ardSerial = serial.Serial(self.settingsDict['COMPORT'], arduinoBaudRate, timeout = 1, xonxoff=False, rtscts=False, dsrdtr=False)
                 self.TerminalScroller.append(f"Arduino Connected Successfully!")
                 self.ConnectArduinoButton.setText(QtCore.QCoreApplication.translate("self", "Disconnect Arduino"))
                 self.arduinoConnected = True
