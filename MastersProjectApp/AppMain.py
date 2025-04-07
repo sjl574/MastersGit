@@ -25,10 +25,8 @@ from PyQt5.QtGui import QImage,QPixmap
 from PyQt5.QtCore import QThread,pyqtSignal as Signal,pyqtSlot as Slot
 import serial.tools.list_ports
 import serial
-import cv2 as cv
-import numpy as np
-from appFiles.poseDetector import detector
 from appFiles.CommunicationThread import ArduinoComs
+from appFiles.cameraThread import ImagingThread
 import appFiles.arduinoCommands as AC
 import time
 import json
@@ -249,6 +247,9 @@ class MyApp(QtWidgets.QMainWindow):
         self.TerminalScroller.append("Window Booted")
 
 
+
+    ##--------------------------------UI FUNCTIONS
+
     #Func to set texts of all labels, buttons, etc
     def retranslateUi(self):
         _translate = QtCore.QCoreApplication.translate
@@ -275,47 +276,11 @@ class MyApp(QtWidgets.QMainWindow):
             self.ComPortCombo.setCurrentIndex(list(self.COMPORTS.values()).index(MyApp.settingsDict['COMPORT']))
         self.ProjectileTypeCombo.setCurrentIndex(self.projectileTypes.index(MyApp.settingsDict['ProjectileType']))
 
-
     #Print debug messages to app terminak
     def terminalDebugger(self, message : str):
         self.TerminalScroller.append(message)
 
-
-    #Sets initial values from last application
-    def readDefaultsJson(self):
-        #try open json, may not exist
-        try:
-            with open(MyApp.jsonDir) as defaultsJson:
-                jsonStr = defaultsJson.read()
-        except Exception as e:
-            print(f"Failed reading defaults Json: {e}") 
-            return None
-        #interpret json as python dict and use it to replace app settings
-        MyApp.settingsDict = json.loads(jsonStr)
-        return None
-    
-
-    #write applied settings to a json file
-    def writeDefaultsJson(self):
-        #write settings dict to a json file
-        with open(MyApp.jsonDir, "w") as jsonFile:
-            jsonFile.write(json.dumps(MyApp.settingsDict))
-
-
-    def toggleCamera(self):        
-        if not self.cameraConnected:
-            self.TerminalScroller.append("Connecting To Camera, May Take few Seconds...")
-            self.cameraConnected = True
-            MyApp.runCamera = True
-            self.cameraThread.start()
-            self.ConnectCameraButton.setText(QtCore.QCoreApplication.translate("self", "Disconnect Camera"))
-        else:
-            self.TerminalScroller.append("Disconnecting Camera")
-            self.cameraConnected = False
-            MyApp.runCamera = False
-            self.ConnectCameraButton.setText(QtCore.QCoreApplication.translate("self", "Connect Camera"))
-
-
+    #Set image, called on internal signal interrupt
     @Slot(QImage)
     def setImage(self,image):
         self.poseResults = self.cameraThread.getResults()
@@ -324,7 +289,7 @@ class MyApp(QtWidgets.QMainWindow):
         if self.tracking and not self.trackingInMotion:
             self.track()
 
-
+    #Interrupt upon clicking image
     def imageClickFunc(self, mouseXY):
         if self.cameraConnected:
             anglesXY = ImagingThread.pxToAngle(mouseXY)
@@ -333,8 +298,7 @@ class MyApp(QtWidgets.QMainWindow):
             self.moveMotorX(anglesXY[0])
             self.moveMotorY(anglesXY[1])
 
-
-    #---------------------BUTTON FUNCTIONS
+    #connect arduino button
     def connectArduinoFunc(self):
         if not self.arduinoConnected:
             self.TerminalScroller.append("Attempting Arduino Serial Connection...")
@@ -355,23 +319,7 @@ class MyApp(QtWidgets.QMainWindow):
             except Exception as e:
                 self.TerminalScroller.append(f"Failed to disconnect Arduino!! \nError: {e}")
 
-
-    def fireProjectButtonFunc(self):
-        self.TerminalScroller.append("Firing Projectile!")
-        self.fireProjectile()
-
-
-    def toggleTrackingFunc(self):
-        if not self.tracking:
-            self.TerminalScroller.append("Starting Tracking")
-            self.ToggleTrackingButton.setText(QtCore.QCoreApplication.translate("self", "Stop Tracking"))
-            self.tracking = True
-        else:
-            self.TerminalScroller.append("Stopping Tracking")
-            self.ToggleTrackingButton.setText(QtCore.QCoreApplication.translate("self", "Start Tracking"))
-            self.tracking = False         
-
-
+    #refresh the communication connections combo box
     def updateComCombo(self):
         #get all connected comports
         self.COMPORTS = {}
@@ -383,7 +331,7 @@ class MyApp(QtWidgets.QMainWindow):
         for key,_ in list(self.COMPORTS.items()):
             self.ComPortCombo.addItem(key)
 
-
+    #Apply settings as currently written in settings tab
     def applySettingsFunc(self):
         #Get camera Number (only accepts number if entry is all digits)
         holdval = self.CameraNumberLE.text()
@@ -415,26 +363,49 @@ class MyApp(QtWidgets.QMainWindow):
         self.TerminalScroller.append(f"Proj Rad: {str(MyApp.settingsDict['ProjectileRadius'])}")
 
 
-    #Other Functions
 
-    #------ARDUINO COMMANDS
+    #--------JSON Editing
 
+    #Sets initial values from last application
+    def readDefaultsJson(self):
+        #try open json, may not exist
+        try:
+            with open(MyApp.jsonDir) as defaultsJson:
+                jsonStr = defaultsJson.read()
+        except Exception as e:
+            print(f"Failed reading defaults Json: {e}") 
+            return None
+        #interpret json as python dict and use it to replace app settings
+        MyApp.settingsDict = json.loads(jsonStr)
+        return None
+    
+    #write applied settings to a json file
+    def writeDefaultsJson(self):
+        #write settings dict to a json file
+        with open(MyApp.jsonDir, "w") as jsonFile:
+            jsonFile.write(json.dumps(MyApp.settingsDict))
+
+
+
+    #------ARDUINO COMMUNICATION
+
+    #Setup arduino serial communication
     def startArduinoComms(self):
         ArduinoComs.running = True
         self.ardThread.connect(self.settingsDict['COMPORT'], arduinoBaudRate)
         self.ardThread.start()
 
-
+    #stop arduino serial communication
     def stopArduinoComs(self):
         ArduinoComs.running = False
         time.sleep(0.1) #give time for thread to end
         self.ardThread.disconnect()
     
-
+    #Send a message to arduino over serial
     def messageArduino(self, command, value, expectReplyLen = 0, replyTimeOut_s = 5.0):
         ArduinoComs.messageQueue.put([command, value, expectReplyLen, replyTimeOut_s])
 
-
+    #Interrupt for calling on arduino communication recieval
     def recieveArdComs(self, message : list):
         command = message[0]
         value = message[1]
@@ -444,8 +415,23 @@ class MyApp(QtWidgets.QMainWindow):
             self.yMotion = False
 
 
+    #--------------------PHYSICAL ACTION COMMANDS
+
+
+    #toggle tracking on/off
+    def toggleTrackingFunc(self):
+        if not self.tracking:
+            self.TerminalScroller.append("Starting Tracking")
+            self.ToggleTrackingButton.setText(QtCore.QCoreApplication.translate("self", "Stop Tracking"))
+            self.tracking = True
+        else:
+            self.TerminalScroller.append("Stopping Tracking")
+            self.ToggleTrackingButton.setText(QtCore.QCoreApplication.translate("self", "Start Tracking"))
+            self.tracking = False         
+
     #send fire projectile command to arduino
-    def fireProjectile(self):
+    def fireProjectButtonFunc(self):
+        self.TerminalScroller.append("Firing Projectile!")
         ###...
         #Need to create full firing calculator, should
         #request ir distance, waiting for reply
@@ -467,7 +453,6 @@ class MyApp(QtWidgets.QMainWindow):
         ret = self.messageArduino(AC.COMMAND_MOVE_X, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
         self.xMotion = True #Flag motors in motion
 
-
     def moveMotorY(self, angle):
         #Dont send signal if already in / awaiting motion
         if self.yMotion:
@@ -479,7 +464,6 @@ class MyApp(QtWidgets.QMainWindow):
         ret = self.messageArduino(AC.COMMAND_MOVE_Y, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
         self.yMotion = True #flag motors in motion
         
-
     #Called upon each new image when tracking is enabled
     def track(self):
         #Set tracking in motion to say function is occupied
@@ -495,82 +479,31 @@ class MyApp(QtWidgets.QMainWindow):
 
 
 
-#Class for handling camera operation in alt thread
-class ImagingThread(QThread):
-    #Static class variables
-    frame_signal = Signal(QImage)
-    heavyModel = False
-    cameraFovX = 59.34
-    cameraFovY = 56.5
-    imageWidth = 1920
-    imageHeight = 1080
-    imageWidthResized = 640
-    imageHeightResized = 480
+    #-----------------Camera Functions
+    #Connect to camera, begin image recording and viewing
+    def connectCamera(self):
+        self.TerminalScroller.append("Connecting To Camera, May Take few Seconds...")
+        self.cameraConnected = True
+        ImagingThread.cameraNum = self.settingsDict['CameraNum']
+        ImagingThread.running = True
+        self.cameraThread.start()
 
-    #Function override (Run thread - this will be run upon class.start())
-    def run(self):
-        self.results = None
-        #connect camera
-        self.cam = cv.VideoCapture(MyApp.settingsDict['CameraNum'], cv.CAP_DSHOW)
-        self.cam.set(cv.CAP_PROP_FRAME_WIDTH, ImagingThread.imageWidth)
-        self.cam.set(cv.CAP_PROP_FRAME_HEIGHT, ImagingThread.imageHeight)
-        #Run camera whilst flag active
-        while MyApp.runCamera:
-            ret, rawFrame = self.cam.read()
-            if not ret:
-                MyApp.runCamera = False
-                print(f"Failed to read camera Image! ")
-                break
-            self.results, frame = detector.detectAndDraw(rawFrame)
-            frame = self.cvToLabel(frame)
-            #This emits a signal to the application containing the image
-            self.frame_signal.emit(frame)
-        #upon exit, disconnect camera
-        self.cam.release()
-    
-    #Convert cv np image to qt label image type
-    def cvToLabel(self,image):
-        image = cv.resize(image, (self.imageWidthResized, self.imageHeightResized))
-        image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
-        image = QImage(image,
-                       image.shape[1],
-                       image.shape[0],
-                       3 * image.shape[1],
-                       QImage.Format_RGB888)
-        return image
-    
-    #Obtain raw results from last image (these are normed pixels)
-    def getResults(self):
-        return self.results
-    
-    #obtain chest angle from last image
-    def getChestAngles(self):
-        if self.results is not None:
-            return self.normedToAngle(detector.getChestResults(self.results))
+    #disconnect camera, stop viewing
+    def disconnectCamera(self):
+        ImagingThread.running = False
+        self.cameraConnected = False
+        self.TerminalScroller.append("Disconnecting Camera")
+
+    #toggle camera on/off (wrapper for connectCamera / disconnectCamera)
+    def toggleCamera(self):        
+        if not self.cameraConnected:
+            self.connectCamera()
+            self.ConnectCameraButton.setText(QtCore.QCoreApplication.translate("self", "Disconnect Camera"))
         else:
-            return np.array([0,0])
-    
-    @classmethod
-    def normedToPx(cls, xyNormed) -> np.ndarray:
-        imgSize = np.array([cls.imageWidthResized, cls.imageHeightResized])
-        centerChestPx = xyNormed * imgSize
-        return centerChestPx
+            self.disconnectCamera()
+            self.ConnectCameraButton.setText(QtCore.QCoreApplication.translate("self", "Connect Camera"))
 
-    @classmethod
-    def pxToAngle(cls, xyPx) -> np.ndarray:
-        DPPX = cls.cameraFovX / cls.imageWidthResized
-        DPPY = cls.cameraFovY / cls.imageHeightResized
-        xPxFromCenter = xyPx[0] - (cls.imageWidthResized/2)
-        yPxFromCenter = xyPx[1] - (cls.imageHeightResized/2)
-        xDegFromCenter = xPxFromCenter * DPPX
-        yDegFromCenter = yPxFromCenter * DPPY
-        return np.array([xDegFromCenter, yDegFromCenter])
-        
-    @classmethod
-    def normedToAngle(cls, xyNormed) -> np.ndarray:
-        xyPx = cls.normedToPx(xyNormed)
-        xyAngles = cls.pxToAngle(xyPx)
-        return xyAngles
+
 
 
 if __name__ == "__main__":
