@@ -18,15 +18,15 @@
 #this guy for displaying opencv: https://gist.github.com/docPhil99/ca4da12c9d6f29b9cea137b617c7b8b1
 #This article for fixing displaying open:  https://medium.com/@ilias.info.tel/display-opencv-camera-on-a-pyqt-app-4465398546f7
 
-
-from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtGui import QPixmap, QColor
 from PyQt5.QtGui import QImage,QPixmap
-from PyQt5.QtCore import QThread,pyqtSignal as Signal,pyqtSlot as Slot
+from PyQt5.QtCore import pyqtSignal as Signal,pyqtSlot as Slot
 import serial.tools.list_ports
 import serial
 from appFiles.CommunicationThread import ArduinoComs
 from appFiles.cameraThread import ImagingThread
+from appFiles.trajectories import PlotWindow
 import appFiles.arduinoCommands as AC
 import time
 import json
@@ -52,7 +52,6 @@ class ClickableLabel(QtWidgets.QLabel):
         x,y = event.x(), event.y()
         self.clicked.emit([x,y])
         
-
 
 class MyApp(QtWidgets.QMainWindow):
     runCamera = False
@@ -123,6 +122,10 @@ class MyApp(QtWidgets.QMainWindow):
         self.FireProjectButton = QtWidgets.QPushButton(self.gridLayoutWidget)
         self.FireProjectButton.setObjectName("FireProjectButton")
         self.verticalLayout_3.addWidget(self.FireProjectButton)
+        #Place show trajectory button
+        self.ShowTrajectoryButton = QtWidgets.QPushButton(self.gridLayoutWidget)
+        self.ShowTrajectoryButton.setObjectName("ShowTrajectoryButton")
+        self.verticalLayout_3.addWidget(self.ShowTrajectoryButton)
         #horizontal seperation
         self.horizontalLayout.addWidget(self.splitter)
         #image label
@@ -201,6 +204,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.ApplySettings.clicked.connect(self.applySettingsFunc)
         self.refreshComButton.clicked.connect(self.updateComCombo)
         self.imageLabel.clicked.connect(self.imageClickFunc)
+        self.ShowTrajectoryButton.clicked.connect(self.showTrajectoryFunc)
 
         #setup Combo lists
         self.updateComCombo()
@@ -238,6 +242,10 @@ class MyApp(QtWidgets.QMainWindow):
 
 
 
+    def showTrajectoryFunc(self):
+        testPlot = PlotWindow()
+
+
     ##--------------------------------UI FUNCTIONS
 
     #Func to set texts of all labels, buttons, etc
@@ -248,6 +256,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.ConnectArduinoButton.setText(_translate(WINDOW_NAME, "Connect Arduino"))
         self.FireProjectButton.setText(_translate(WINDOW_NAME, "Fire Projectile"))
         self.ToggleTrackingButton.setText(_translate("MainWindow", "Toggle Tracking"))
+        self.ShowTrajectoryButton.setText(_translate(WINDOW_NAME, "Show Trajectory"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.MainTab), _translate(WINDOW_NAME, "Main"))
         self.CameraNumberLabel.setText(_translate(WINDOW_NAME, "Camera Number: "))
         self.ComPortLabel.setText(_translate(WINDOW_NAME, "System COM Port"))
