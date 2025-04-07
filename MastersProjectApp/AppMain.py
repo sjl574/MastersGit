@@ -410,6 +410,7 @@ class MyApp(QtWidgets.QMainWindow):
         #scale image to correct dims and return
         return image.scaled(self.imageWidth, self.imageHeight)
     
+
     #------ARDUINO COMMANDS
     #Message arduino over serial
     def messageArduino(self, command : int, data : int = 0, expectReplyLen : int = 0, replyTimeOut_s : float = 5.0) -> bytearray:
@@ -423,8 +424,8 @@ class MyApp(QtWidgets.QMainWindow):
         self.ardSerial.flush()
         #combine command byte and data into into serial of bytes
         message = bytearray()
-        message.extend(command.to_bytes(4, 'little'))
-        message.extend(data.to_bytes(4, 'little'))
+        message.extend(command.to_bytes(4, 'little', signed = True))
+        message.extend(data.to_bytes(4, 'little', signed = True))
         if DEBUG:
             self.TerminalScroller.append(f"Message Sent: {list(message)}")
         self.ardSerial.write(message)
@@ -490,7 +491,7 @@ class ImagingThread(QThread):
     def run(self):
         self.results = None
         #connect camera
-        self.cam = cv.VideoCapture(MyApp.cameraNum, cv.CAP_DSHOW)
+        self.cam = cv.VideoCapture(MyApp.settingsDict['CameraNum'], cv.CAP_DSHOW)
         self.cam.set(cv.CAP_PROP_FRAME_WIDTH, ImagingThread.imageWidth)
         self.cam.set(cv.CAP_PROP_FRAME_HEIGHT, ImagingThread.imageHeight)
         #Run camera whilst flag active
