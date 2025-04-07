@@ -61,9 +61,8 @@ class MyApp(QtWidgets.QMainWindow):
     settingsDict = {
         'CameraNum' : 0,
         'COMPORT' : None,
-        'ProjectileType' : 'Cylinder',
         'ProjectileRadius' : 10,
-        'ProjectileLength' : 30,
+        'ProjectileSpeed' : 5,
     }
 
     def __init__(self):
@@ -140,45 +139,41 @@ class MyApp(QtWidgets.QMainWindow):
         self.SettingsTab.setObjectName("SettingsTab")
         self.gridLayout = QtWidgets.QGridLayout(self.SettingsTab)
         self.gridLayout.setObjectName("gridLayout")
-        self.ComPortCombo = QtWidgets.QComboBox(self.SettingsTab)
-        self.ComPortCombo.setObjectName("ComPortCombo")
-        self.gridLayout.addWidget(self.ComPortCombo, 1, 2, 1, 1)
+
         self.CameraNumberLabel = QtWidgets.QLabel(self.SettingsTab)
         self.CameraNumberLabel.setObjectName("CameraNumberLabel")
         self.gridLayout.addWidget(self.CameraNumberLabel, 0, 0, 1, 1)
-        self.ComPortLabel = QtWidgets.QLabel(self.SettingsTab)
-        self.ComPortLabel.setObjectName("ComPortLabel")
-        self.gridLayout.addWidget(self.ComPortLabel, 1, 0, 1, 1)
-        self.ApplySettings = QtWidgets.QPushButton(self.SettingsTab)
-        self.ApplySettings.setObjectName("ApplySettings")
-        self.gridLayout.addWidget(self.ApplySettings, 3, 3, 1, 1)
         self.CameraNumberLE = QtWidgets.QLineEdit(self.SettingsTab)
         self.CameraNumberLE.setObjectName("CameraNumberLE")
         self.gridLayout.addWidget(self.CameraNumberLE, 0, 2, 1, 1)
-        self.DimensionsLabel = QtWidgets.QLabel(self.SettingsTab)
-        self.DimensionsLabel.setObjectName("DimensionsLabel")
-        self.gridLayout.addWidget(self.DimensionsLabel, 2, 0, 1, 2)
-        self.gridLayout_2 = QtWidgets.QGridLayout()
-        self.gridLayout_2.setObjectName("gridLayout_2")
-        self.ProjectileLengthLE = QtWidgets.QLineEdit(self.SettingsTab)
-        self.ProjectileLengthLE.setObjectName("ProjectileLengthLE")
-        self.gridLayout_2.addWidget(self.ProjectileLengthLE, 1, 2, 1, 1)
-        self.ProjectileTypeCombo = QtWidgets.QComboBox(self.SettingsTab)
-        self.ProjectileTypeCombo.setObjectName("ProjectileTypeCombo")
-        self.gridLayout_2.addWidget(self.ProjectileTypeCombo, 0, 0, 2, 1)
-        self.ProjectileRadiusLE = QtWidgets.QLineEdit(self.SettingsTab)
-        self.ProjectileRadiusLE.setObjectName("ProjectileRadiusLE")
-        self.gridLayout_2.addWidget(self.ProjectileRadiusLE, 0, 2, 1, 1)
-        self.RadiusLabel = QtWidgets.QLabel(self.SettingsTab)
-        self.RadiusLabel.setObjectName("RadiusLabel")
-        self.gridLayout_2.addWidget(self.RadiusLabel, 0, 1, 1, 1)
-        self.LengthLabel = QtWidgets.QLabel(self.SettingsTab)
-        self.LengthLabel.setObjectName("LengthLabel")
-        self.gridLayout_2.addWidget(self.LengthLabel, 1, 1, 1, 1)
-        self.gridLayout.addLayout(self.gridLayout_2, 2, 2, 1, 1)
+
+        self.ComPortLabel = QtWidgets.QLabel(self.SettingsTab)
+        self.ComPortLabel.setObjectName("ComPortLabel")
+        self.gridLayout.addWidget(self.ComPortLabel, 1, 0, 1, 1)
+        self.ComPortCombo = QtWidgets.QComboBox(self.SettingsTab)
+        self.ComPortCombo.setObjectName("ComPortCombo")
+        self.gridLayout.addWidget(self.ComPortCombo, 1, 2, 1, 1)
         self.refreshComButton = QtWidgets.QPushButton(self.SettingsTab)
         self.refreshComButton.setObjectName("Refresh COM Ports")
         self.gridLayout.addWidget(self.refreshComButton, 1, 3, 1, 1)
+
+        self.RadiusLabel = QtWidgets.QLabel(self.SettingsTab)
+        self.RadiusLabel.setObjectName("RadiusLabel")
+        self.gridLayout.addWidget(self.RadiusLabel, 2, 0, 1, 1)
+        self.ProjectileRadiusLE = QtWidgets.QLineEdit(self.SettingsTab)
+        self.ProjectileRadiusLE.setObjectName("ProjectileRadiusLE")
+        self.gridLayout.addWidget(self.ProjectileRadiusLE, 2, 1, 1, 2)
+
+        self.SpeedLabel = QtWidgets.QLabel(self.SettingsTab)
+        self.SpeedLabel.setObjectName("SpeedLabel")
+        self.gridLayout.addWidget(self.SpeedLabel,3, 0, 1, 1)
+        self.SpeedLE = QtWidgets.QLineEdit(self.SettingsTab)
+        self.SpeedLE.setObjectName("SpeedLE")
+        self.gridLayout.addWidget(self.SpeedLE,3, 1, 1, 2)     
+
+        self.ApplySettings = QtWidgets.QPushButton(self.SettingsTab)
+        self.ApplySettings.setObjectName("ApplySettings")
+        self.gridLayout.addWidget(self.ApplySettings, 4, 3, 1, 1)
         self.tabWidget.addTab(self.SettingsTab, "")
         self.verticalLayout_2.addWidget(self.tabWidget)
         
@@ -208,16 +203,11 @@ class MyApp(QtWidgets.QMainWindow):
         self.imageLabel.clicked.connect(self.imageClickFunc)
 
         #setup Combo lists
-        self.ProjectileTypeCombo.addItems(MyApp.projectileTypes)
         self.updateComCombo()
 
         #Button / Field variables
         self.cameraConnected = False
         self.projectileFiring = False
-        self.COMPORT = ""
-        self.projectileRadius = 0
-        self.projectileLength = 0
-        self.projectileType = "Cylinder"
         self.arduinoConnected = False
         self.tracking = False
         self.trackingInMotion = False #variable is used to stop tracking function being called multiple times at once
@@ -263,18 +253,16 @@ class MyApp(QtWidgets.QMainWindow):
         self.ComPortLabel.setText(_translate(WINDOW_NAME, "System COM Port"))
         self.refreshComButton.setText(_translate(WINDOW_NAME, "Refresh"))
         self.ApplySettings.setText(_translate(WINDOW_NAME, "Apply"))
-        self.DimensionsLabel.setText(_translate(WINDOW_NAME, "Dimensions:"))
         self.RadiusLabel.setText(_translate(WINDOW_NAME, "Radius"))
-        self.LengthLabel.setText(_translate(WINDOW_NAME, "Length"))
+        self.SpeedLabel.setText(_translate(WINDOW_NAME, "Speed m/s"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.SettingsTab), _translate(WINDOW_NAME, "Settings"))
         #Set current values of Line edits
         self.CameraNumberLE.setText(str(MyApp.settingsDict['CameraNum']))
-        self.ProjectileLengthLE.setText(str(MyApp.settingsDict['ProjectileLength']))
         self.ProjectileRadiusLE.setText(str(MyApp.settingsDict['ProjectileRadius']))
+        self.SpeedLE.setText(str(MyApp.settingsDict['ProjectileSpeed']))
         #set current values of combo boxes
         if MyApp.settingsDict['COMPORT'] in self.COMPORTS.values():
             self.ComPortCombo.setCurrentIndex(list(self.COMPORTS.values()).index(MyApp.settingsDict['COMPORT']))
-        self.ProjectileTypeCombo.setCurrentIndex(self.projectileTypes.index(MyApp.settingsDict['ProjectileType']))
 
     #Print debug messages to app terminak
     def terminalDebugger(self, message : str):
@@ -343,13 +331,11 @@ class MyApp(QtWidgets.QMainWindow):
         if not any(not char.isdigit() for char in holdval) and len(holdval) > 0:
             MyApp.settingsDict['ProjectileRadius'] = int(holdval)
         self.ProjectileRadiusLE.setText(holdval)
-        #Get length
-        holdval = self.ProjectileLengthLE.text()
+        #get Speed
+        holdval = self.SpeedLE.text()
         if not any(not char.isdigit() for char in holdval) and len(holdval) > 0:
-            MyApp.settingsDict['ProjectileLength'] = int(holdval)
-        self.ProjectileLengthLE.setText(holdval)
-        #set Projectile Shape
-        MyApp.settingsDict['ProjectileType'] = self.projectileTypes[self.ProjectileTypeCombo.currentIndex()]
+            MyApp.settingsDict['ProjectileSpeed'] = int(holdval)
+        self.SpeedLE.setText(holdval)
         #Set arduino comport
         MyApp.settingsDict['COMPORT'] = self.COMPORTS[self.ComPortCombo.currentText()]
         #Save settings to file
@@ -358,8 +344,6 @@ class MyApp(QtWidgets.QMainWindow):
         self.TerminalScroller.append(f"Settings Applied:")
         self.TerminalScroller.append(f"Camera: {str(MyApp.settingsDict['CameraNum'])}")
         self.TerminalScroller.append(f"Ard Com: {MyApp.settingsDict['COMPORT']}")
-        self.TerminalScroller.append(f"Proj Type: {MyApp.settingsDict['ProjectileType']}")
-        self.TerminalScroller.append(f"Proj Len: {str(MyApp.settingsDict['ProjectileLength'])}")
         self.TerminalScroller.append(f"Proj Rad: {str(MyApp.settingsDict['ProjectileRadius'])}")
 
 
