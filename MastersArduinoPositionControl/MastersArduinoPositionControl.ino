@@ -62,13 +62,13 @@ void setup() {
   //Setup firing mechanism
   //.....
 
-  // //Setup Lidar
-  // if(!lidar.begin()){
-  //   flashLED(0);
-  //   while(1);
-  // }
-  // lidar.startFilter();
-  // lidar.setMeasureMode(lidar.eLidar07Single);
+  //Setup Lidar
+  if(!lidar.begin()){
+    flashLED(0);
+    while(1);
+  }
+  lidar.startFilter();
+  lidar.setMeasureMode(lidar.eLidar07Single);
 
   //Setup End
 }
@@ -109,7 +109,7 @@ void processSerial(){
 
   // debug echo command
   // Serial.write((char*)&cmd, 4);
-  Serial.write((char*)&val, 4);
+  // Serial.write((char*)&val, 4);
   //THIS IS NEEDED AS PYTHON ADDS 0xF0,0xF0 and i dont know why???
   delay(50);
   while(Serial.available()){Serial.read();} //clear any left over bytes
@@ -118,21 +118,23 @@ void processSerial(){
   switch(cmd){ 
     case CMD_MOTOR_X: //upper Stepper Motion
       upperStepper.move(val * DEG_DECIMAL_SHIFT * upperDTS);
+      sendSerialInt(&val);
       break;
     case CMD_MOTOR_Y: //lower stepper motion
       lowerStepper.move(val * DEG_DECIMAL_SHIFT * lowerDTS);
+      sendSerialInt(&val);
       break;
     case CMD_FIRE: //fire projectile
       fireProjectile(val);
       break;
     case CMD_GET_LIDAR:
-      // sendLidar();
+      sendLidar();
       break;
   }
 }
 
 //send an integer value back to PC over serial
-void sendSerialInt(uint32_t* dataPtr){
+void sendSerialInt(int32_t* dataPtr){
   Serial.write((char*) dataPtr, 4); //type cast int to char(byte), send 4 bytes(one int)
 }
 
@@ -216,17 +218,12 @@ void upperMotorClearance(){
 //---------------------LIDAR FUNCTIONS
 //capture lidar value and send back over serial
 void sendLidar(){
-  uint32_t lidarmm;
-  lidarCapture(&lidarmm);
-}
-
-void lidarCapture(uint32_t* valPtr){
+  int32_t lidarmm;
   lidar.startMeasure();
   lidar.getValue();
-  *valPtr = lidar.getDistanceMM();
+  lidarmm = (int32_t) lidar.getDistanceMM();
+  sendSerialInt(&lidarmm);
 }
-
-
 
 
 //---------------------OTHER

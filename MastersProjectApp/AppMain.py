@@ -37,8 +37,8 @@ DEBUG = True
 #Default / Customisable variables
 arduinoBaudRate = 115200
 WINDOW_NAME = "Sam's Masters Project"
-FLIP_Y_MOTION = True
-FLIP_X_MOTION = False
+FLIP_Y_MOTION = False
+FLIP_X_MOTION = True
 
 
 #subclass of QLabel to allow gathering of mouse cursor position from clicks
@@ -126,7 +126,11 @@ class MyApp(QtWidgets.QMainWindow):
         self.ShowTrajectoryButton = QtWidgets.QPushButton(self.gridLayoutWidget)
         self.ShowTrajectoryButton.setObjectName("ShowTrajectoryButton")
         self.verticalLayout_3.addWidget(self.ShowTrajectoryButton)
-        #horizontal seperation
+        #Place get lidar button
+        self.GetLidarButton = QtWidgets.QPushButton(self.gridLayoutWidget)
+        self.GetLidarButton.setObjectName("GetLidarButton")
+        self.verticalLayout_3.addWidget(self.GetLidarButton)
+        #horizontal separation
         self.horizontalLayout.addWidget(self.splitter)
         #image label
         self.imageLabel = ClickableLabel(self.splitter)
@@ -205,6 +209,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.refreshComButton.clicked.connect(self.updateComCombo)
         self.imageLabel.clicked.connect(self.imageClickFunc)
         self.ShowTrajectoryButton.clicked.connect(self.showTrajectoryFunc)
+        self.GetLidarButton.clicked.connect(self.getLidarFunc)
 
         #setup Combo lists
         self.updateComCombo()
@@ -257,6 +262,7 @@ class MyApp(QtWidgets.QMainWindow):
         self.FireProjectButton.setText(_translate(WINDOW_NAME, "Fire Projectile"))
         self.ToggleTrackingButton.setText(_translate("MainWindow", "Toggle Tracking"))
         self.ShowTrajectoryButton.setText(_translate(WINDOW_NAME, "Show Trajectory"))
+        self.GetLidarButton.setText(_translate(WINDOW_NAME, "Get Distance"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.MainTab), _translate(WINDOW_NAME, "Main"))
         self.CameraNumberLabel.setText(_translate(WINDOW_NAME, "Camera Number: "))
         self.ComPortLabel.setText(_translate(WINDOW_NAME, "System COM Port"))
@@ -404,8 +410,10 @@ class MyApp(QtWidgets.QMainWindow):
         value = message[1]
         if command == AC.COMMAND_MOVE_X:
             self.xMotion = False
-        if command == AC.COMMAND_MOVE_Y:
+        elif command == AC.COMMAND_MOVE_Y:
             self.yMotion = False
+        elif command == AC.COMMAND_LIDAR:
+            self.terminalDebugger(f"LIDAR RECIEVED: {value}mm")
 
 
     #--------------------PHYSICAL ACTION COMMANDS
@@ -433,6 +441,11 @@ class MyApp(QtWidgets.QMainWindow):
         #move upwards in accordance to drag, trig, etc to hit currently facing target
         #fire projectile
         self.messageArduino(AC.COMMAND_FIRE, 6, 4)
+
+    #Retrieve current lidar distance from arduino
+    def getLidarFunc(self):
+        self.terminalDebugger("Retrieving Current Lidar...")
+        self.messageArduino(AC.COMMAND_LIDAR,0,4)
 
     #send motor x movement command to arduino
     def moveMotorX(self, angle):

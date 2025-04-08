@@ -10,21 +10,21 @@
 #define UPPER_MOTOR_SPR 200       
 #define LOWER_MOTOR_SPR 200 
 //Microsteps set on controll DIP switches
-#define UPPER_MICROSTEPS 4  
-#define LOWER_MICROSTEPS 4  
+#define UPPER_MICROSTEPS 4
+#define LOWER_MICROSTEPS 8
 //GEARING RATIO
 #define UPPER_GR 2
 #define LOWER_GR 3  //????????? CHECK THIS
 //Speed 
-#define UPPER_MAX_RPM 200
-#define LOWER_MAX_RPM 200
+#define UPPER_MAX_RPM 100
+#define LOWER_MAX_RPM 50
 #define UPPER_DEFAULT_RPM 40
 #define LOWER_DEFAULT_RPM 40
 //Acceleration
 #define UPPER_MAX_ACCEL 50
 #define LOWER_MAX_ACCEL 100
 #define UPPER_DEFAULT_ACCEL 50
-#define LOWER_DEFAULT_ACCEL 100
+#define LOWER_DEFAULT_ACCEL 50
 //Pins
 #define UPPER_DIR_PIN 13
 #define UPPER_STEP_PIN 12
