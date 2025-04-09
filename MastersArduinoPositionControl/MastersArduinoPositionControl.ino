@@ -62,13 +62,13 @@ void setup() {
   //Setup firing mechanism
   //.....
 
-  //Setup Lidar
-  if(!lidar.begin()){
-    flashLED(0);
-    while(1);
-  }
-  lidar.startFilter();
-  lidar.setMeasureMode(lidar.eLidar07Single);
+  // //Setup Lidar
+  // if(!lidar.begin()){
+  //   flashLED(0);
+  //   while(1);
+  // }
+  // lidar.startFilter();
+  // lidar.setMeasureMode(lidar.eLidar07Single);
 
   //Setup End
 }
@@ -76,6 +76,9 @@ void setup() {
 void loop() {
   //main setup
   flashLED(3);
+  int32_t const UPPER_OOB = CMD_MOTOR_UPPER_OOB;
+  int32_t const LOWER_OOB = CMD_MOTOR_LOWER_OOB;
+  int32_t const nullVal = 0x00;
   //main loop
   while(1){
     //check serial comms for message
@@ -84,9 +87,11 @@ void loop() {
     // //check flags for motion failures (bb flags, etc)
     // if(bbLowerFlag){
     //   lowerMotorClearance();
+    //   sendSerialMessage(&LOWER_OOB, &nullVal)
     // }
     // if(bbUpperFlag){
     //   upperMotorClearance();
+    //   sendSerialMessage(&UPPER_OOB, &nullVal)
     // }
     
   }//main loop end
@@ -107,35 +112,33 @@ void processSerial(){
   int32_t cmd = * ((int32_t*) &buffer[0]);;
   int32_t val = * ((int32_t*) &buffer[4]);
 
-  // debug echo command
-  // Serial.write((char*)&cmd, 4);
-  // Serial.write((char*)&val, 4);
-  //THIS IS NEEDED AS PYTHON ADDS 0xF0,0xF0 and i dont know why???
-  delay(50);
-  while(Serial.available()){Serial.read();} //clear any left over bytes
+  // //THIS IS NEEDED AS PYTHON ADDS 0xF0,0xF0 and i dont know why???
+  // delay(1);
+  // while(Serial.available()){Serial.read();} //clear any left over bytes
 
   //select appropriate command
   switch(cmd){ 
-    case CMD_MOTOR_X: //upper Stepper Motion
-      upperStepper.move(val * DEG_DECIMAL_SHIFT * upperDTS);
-      sendSerialInt(&val);
+    case CMD_MOTOR_UPPER: //upper Stepper Motion
+      moveUpper(val * DEG_DECIMAL_SHIFT);
       break;
-    case CMD_MOTOR_Y: //lower stepper motion
-      lowerStepper.move(val * DEG_DECIMAL_SHIFT * lowerDTS);
-      sendSerialInt(&val);
+    case CMD_MOTOR_LOWER: //lower stepper motion
+      moveLower(val * DEG_DECIMAL_SHIFT);
       break;
     case CMD_FIRE: //fire projectile
       fireProjectile(val);
       break;
     case CMD_GET_LIDAR:
-      sendLidar();
+      //getLidar(&val);
       break;
   }
+  //After Action, echo command and value as acknowledgment
+  sendSerialMessage(&cmd, &val);
 }
 
 //send an integer value back to PC over serial
-void sendSerialInt(int32_t* dataPtr){
-  Serial.write((char*) dataPtr, 4); //type cast int to char(byte), send 4 bytes(one int)
+void sendSerialMessage(int32_t* cmdPtr, int32_t* valPtr){
+  Serial.write((char*) cmdPtr, 4); //type cast int to char(byte), send 4 bytes(one int)
+  Serial.write((char*) valPtr, 4);
 }
 
 
@@ -143,9 +146,8 @@ void sendSerialInt(int32_t* dataPtr){
 //-----------------------------------------------COMMAND ACTION FUNCTIONS
 
 //---------------------PROJECTILE FIRING
-void fireProjectile(uint32_t val){
-  //Temp func, flash led 5 times
-  flashLED(val);
+void fireProjectile(int32_t val){
+  //Nothing for now
 }
 
 
@@ -217,12 +219,12 @@ void upperMotorClearance(){
 
 //---------------------LIDAR FUNCTIONS
 //capture lidar value and send back over serial
-void sendLidar(){
+void getLidar(int32_t* valPtr){
   int32_t lidarmm;
   lidar.startMeasure();
   lidar.getValue();
   lidarmm = (int32_t) lidar.getDistanceMM();
-  sendSerialInt(&lidarmm);
+  (*valPtr) = lidarmm;
 }
 
 

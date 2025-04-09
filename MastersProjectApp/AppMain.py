@@ -24,7 +24,7 @@ from PyQt5.QtGui import QImage,QPixmap
 from PyQt5.QtCore import pyqtSignal as Signal,pyqtSlot as Slot
 import serial.tools.list_ports
 import serial
-from appFiles.CommunicationThread import ArduinoComs
+from appFiles.timedComs import ArduinoTimedComs as ArdComs
 from appFiles.cameraThread import ImagingThread
 from appFiles.trajectories import PlotWindow
 import appFiles.arduinoCommands as AC
@@ -223,9 +223,7 @@ class MyApp(QtWidgets.QMainWindow):
 
         #Threading
         #Arduino comms thread
-        self.ardThread = ArduinoComs()
-        self.ardThread.recieved_signal.connect(self.recieveArdComs)
-        self.ardThread.debug_signal.connect(self.terminalDebugger)
+        self.ardCom = ArdComs(self.recieveArdComs, debugFunc = self.terminalDebugger)
 
         #Camera Thread
         self.cameraThread = ImagingThread()
@@ -390,19 +388,15 @@ class MyApp(QtWidgets.QMainWindow):
 
     #Setup arduino serial communication
     def startArduinoComms(self):
-        ArduinoComs.running = True
-        self.ardThread.connect(self.settingsDict['COMPORT'], arduinoBaudRate)
-        self.ardThread.start()
+        self.ardCom.connect(self.settingsDict['COMPORT'], arduinoBaudRate)
 
     #stop arduino serial communication
     def stopArduinoComs(self):
-        ArduinoComs.running = False
-        time.sleep(0.1) #give time for thread to end
-        self.ardThread.disconnect()
+        self.ardCom.disconnect()
     
     #Send a message to arduino over serial
-    def messageArduino(self, command, value, expectReplyLen = 0, replyTimeOut_s = 5.0):
-        ArduinoComs.messageQueue.put([command, value, expectReplyLen, replyTimeOut_s])
+    def messageArduino(self, command, value):
+        self.ardCom.message(command, value)
 
     #Interrupt for calling on arduino communication recieval
     def recieveArdComs(self, message : list):
@@ -440,12 +434,12 @@ class MyApp(QtWidgets.QMainWindow):
         #calculate drag
         #move upwards in accordance to drag, trig, etc to hit currently facing target
         #fire projectile
-        self.messageArduino(AC.COMMAND_FIRE, 6, 4)
+        self.messageArduino(AC.COMMAND_FIRE, 6)
 
     #Retrieve current lidar distance from arduino
     def getLidarFunc(self):
         self.terminalDebugger("Retrieving Current Lidar...")
-        self.messageArduino(AC.COMMAND_LIDAR,0,4)
+        self.messageArduino(AC.COMMAND_LIDAR,0)
 
     #send motor x movement command to arduino
     def moveMotorX(self, angle):
@@ -456,7 +450,7 @@ class MyApp(QtWidgets.QMainWindow):
         if FLIP_X_MOTION:
             angle = angle * -1
         #Send arduino command
-        ret = self.messageArduino(AC.COMMAND_MOVE_X, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
+        ret = self.messageArduino(AC.COMMAND_MOVE_X, int(angle / AC.DEG_DECIMAL_SHIFT))
         self.xMotion = True #Flag motors in motion
 
     def moveMotorY(self, angle):
@@ -467,7 +461,7 @@ class MyApp(QtWidgets.QMainWindow):
         if FLIP_Y_MOTION:
             angle = angle * -1
         #send arduino command
-        ret = self.messageArduino(AC.COMMAND_MOVE_Y, int(angle / AC.DEG_DECIMAL_SHIFT), 4)
+        ret = self.messageArduino(AC.COMMAND_MOVE_Y, int(angle / AC.DEG_DECIMAL_SHIFT))
         self.yMotion = True #flag motors in motion
         
     #Called upon each new image when tracking is enabled

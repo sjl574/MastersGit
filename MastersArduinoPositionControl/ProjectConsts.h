@@ -50,10 +50,13 @@
 
 /*Serial COMMAND Code*/
 //command value to function
-#define CMD_MOTOR_X   0x01
-#define CMD_MOTOR_Y   0x02
+#define CMD_MOTOR_UPPER   0x01
+#define CMD_MOTOR_LOWER   0x02
 #define CMD_FIRE      0x03
 #define CMD_GET_LIDAR 0x04
+#define CMD_MOTOR_UPPER_OOB 0x05
+#define CMD_MOTOR_LOWER_OOB 0x06
+
 
 //---DECIMAL SHIFT VALUES - shift passed serial val into float e.g.(deg to turn = serial value * shift)
 // shift values are for conversion from serial input to actual value so inverse should be applied in opposition
