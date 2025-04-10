@@ -405,9 +405,9 @@ class MyApp(QtWidgets.QMainWindow):
     def recieveArdComs(self, message : list):
         command = message[0]
         value = message[1]
-        if command == AC.COMMAND_MOVE_X:
+        if command == AC.COMMAND_MOVE_LOWER:
             self.xMotion = False
-        elif command == AC.COMMAND_MOVE_Y:
+        elif command == AC.COMMAND_MOVE_UPPER:
             self.yMotion = False
         elif command == AC.COMMAND_LIDAR:
             self.terminalDebugger(f"LIDAR RECIEVED: {value}mm")
@@ -452,8 +452,10 @@ class MyApp(QtWidgets.QMainWindow):
         #flip direction if required
         if FLIP_X_MOTION:
             angle = angle * -1
+        #Apply angle correction multiplier
+        angle = angle * ANGLE_CORRECTION_LOWER
         #Send arduino command
-        ret = self.messageArduino(AC.COMMAND_MOVE_X, int(angle / AC.DEG_DECIMAL_SHIFT))
+        ret = self.messageArduino(AC.COMMAND_MOVE_LOWER, int(angle / AC.DEG_DECIMAL_SHIFT))
         self.xMotion = True #Flag motors in motion
 
     def moveMotorY(self, angle):
@@ -463,8 +465,10 @@ class MyApp(QtWidgets.QMainWindow):
         #Flip direction if required
         if FLIP_Y_MOTION:
             angle = angle * -1
+        #Apply angle correction multiplier
+        angle = angle * ANGLE_CORRECTION_UPPER
         #send arduino command
-        ret = self.messageArduino(AC.COMMAND_MOVE_Y, int(angle / AC.DEG_DECIMAL_SHIFT))
+        ret = self.messageArduino(AC.COMMAND_MOVE_UPPER, int(angle / AC.DEG_DECIMAL_SHIFT))
         self.yMotion = True #flag motors in motion
         
     #Called upon each new image when tracking is enabled
@@ -475,8 +479,8 @@ class MyApp(QtWidgets.QMainWindow):
         xyAngles = self.cameraThread.getChestAngles()
         if xyAngles[0] > self.xMinAngle:
             self.moveMotorX(xyAngles[0])
-        if xyAngles[1] > self.yMinAngle:
-            self.moveMotorY(xyAngles[1])
+        # if xyAngles[1] > self.yMinAngle:
+        #     self.moveMotorY(-1*xyAngles[1])
         #Turn off tracking in motion to allow next track command
         self.trackingInMotion = False
 

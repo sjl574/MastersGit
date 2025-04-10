@@ -38,6 +38,7 @@ class ArduinoTimedComs():
     
     #Disconnect from arduino
     def disconnect(self):
+        self.timer.stop()
         if self.connected:
             self.serial.close()
             self.connected = False
