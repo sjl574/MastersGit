@@ -37,8 +37,11 @@ DEBUG = True
 #Default / Customisable variables
 arduinoBaudRate = 115200
 WINDOW_NAME = "Sam's Masters Project"
-FLIP_Y_MOTION = False
-FLIP_X_MOTION = True
+FLIP_Y_MOTION = True
+FLIP_X_MOTION = False
+#Multipliers for angle motion
+ANGLE_CORRECTION_UPPER = 1
+ANGLE_CORRECTION_LOWER = 3
 
 
 #subclass of QLabel to allow gathering of mouse cursor position from clicks
