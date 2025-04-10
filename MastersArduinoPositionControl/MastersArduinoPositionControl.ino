@@ -19,7 +19,7 @@ bool upperClockwise, lowerClockwise = false;
 //func declarations
 void moveUpper(float deg);
 void moveLower(float deg);
-
+void motorBootSequence(void);
 
 //beam break sensors
 volatile bool bbUpperFlag, bbLowerFlag = false;
@@ -40,37 +40,43 @@ void processSerial();
 
 
 void setup() {
-  //Setup debug / test led
+  //-----Setup pins
+  //debug led
   pinMode(LED_PIN, OUTPUT);
+  //beam break interrupts
+  pinMode(UPPER_BB_PIN, INPUT);
+  pinMode(LOWER_BB_PIN, INPUT);
 
-  //setup Serial comms
+  //----setup Serial comms
   Serial.begin(115200);
   while(!Serial);
 
+  //-----Setup steppers
   //Init steppers
   upperStepper.begin(UPPER_MAX_RPM, UPPER_MICROSTEPS);
   lowerStepper.begin(LOWER_MAX_RPM, LOWER_MICROSTEPS);
   //Set stepper acceleration profiles
   upperStepper.setSpeedProfile(BasicStepperDriver::LINEAR_SPEED, UPPER_DEFAULT_ACCEL, UPPER_DEFAULT_ACCEL);
   lowerStepper.setSpeedProfile(BasicStepperDriver::LINEAR_SPEED, LOWER_DEFAULT_ACCEL, LOWER_DEFAULT_ACCEL);
-
-
-  //setup beam break interrupts
-  pinMode(UPPER_BB_PIN, INPUT);
-  pinMode(LOWER_BB_PIN, INPUT);
+  //Attached beam break interrupts (must be after boot else they will interfer)
   attachInterrupt(digitalPinToInterrupt(UPPER_BB_PIN), upperBBISR, RISING);
   attachInterrupt(digitalPinToInterrupt(LOWER_BB_PIN), lowerBBISR, RISING);
+
+  //Motor boot sequence (Must be before interrupts set as this will pass them)
+  // motorBootSequence();
 
   //Setup firing mechanism
   //.....
 
-  // //Setup Lidar
-  // if(!lidar.begin()){
-  //   flashLED(0);
-  //   while(1);
-  // }
-  // lidar.startFilter();
-  // lidar.setMeasureMode(lidar.eLidar07Single);
+  //Setup Lidar
+  if(!lidar.begin()){
+    flashLED(0);
+    while(1);
+  }
+  lidar.startFilter();
+  lidar.setMeasureMode(lidar.eLidar07Single);
+
+
 
   //Setup End
 }
@@ -217,6 +223,21 @@ void upperMotorClearance(){
   //should be clear now, reset flag
   bbUpperFlag = false;
 }
+
+//Pulls motors into central positions
+void motorBootSequence(void){
+  //Upper axis first (this will move until hits bb) (or if bb not working just put in place)
+  moveUpper(90.0); 
+  //if successfully hit bb sensor, move up 30deg for clearance
+  if(bbUpperFlag){
+    moveUpper(30.0);
+    bbUpperFlag = false;
+  }
+  //No motion for lower axis (this should be manually set before system setup)  
+  //this is because we have no idea what startup position is unlike upper which should always fall down
+}
+
+
 
 
 //---------------------LIDAR FUNCTIONS
