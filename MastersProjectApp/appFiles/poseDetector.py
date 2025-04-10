@@ -13,6 +13,16 @@ import os
 import sys 
 currentDir = os.path.dirname(os.path.abspath(sys.argv[0])) 
 
+poseIndexToPart = {
+    0  : "nose", 1  : "left eye (inner)", 2  : "left eye", 3  : "left eye (outer)", 4  : "right eye (inner)",
+    5  : "right eye", 6  : "right eye (outer)", 7  : "left ear", 8  : "right ear", 9  : "mouth (left)",
+    10 : "mouth (right)", 11 : "left shoulder", 12 : "right shoulder", 13 : "left elbow", 14 : "right elbow",
+    15 : "left wrist", 16 : "right wrist", 17 : "left pinky", 18 : "right pinky", 19 : "left index",
+    20 : "right index", 21 : "left thumb", 22 : "right thumb", 23 : "left hip", 24 : "right hip",
+    25 : "left knee", 26 : "right knee", 27 : "left ankle", 28 : "right ankle", 29 : "left heel",
+    30 : "right heel", 31 : "left foot index", 32 : "right foot index"
+}
+posePartToIndex = {v: k for k, v in poseIndexToPart.items()}
 
 class PoseDetector():
     #Static variables
@@ -62,18 +72,19 @@ class PoseDetector():
         else:  
             return results, self.drawLandmarks(bgrImg, results)
 
-    #Extract the chest positioning info from the results
-    def getChestResults(self, results) -> np.ndarray:
-        try:
-            landmarksList = results.pose_landmarks[0]
-        except Exception as e:
-            return np.array([0,0])
-        leftChest = np.array([landmarksList[11].x, landmarksList[11].y])
-        rightChest = np.array([landmarksList[12].x, landmarksList[12].y])
-        centerChest = leftChest + ((leftChest-rightChest)/2)
-        return centerChest
-
     
+    #Extract results of passed part
+    def getPartResultByKey(self, key : str, results):
+        #Catch error if part doesn't exist
+        try:
+            index = posePartToIndex[key]
+            landmarksList = results.pose_landmarks[0]
+            return np.array([landmarksList[index].x, landmarksList[index].y])
+        except Exception as e:
+            print(f"Requested part '{key}' does not exist - {e}")
+            return None
+    
+
 #Create "Singleton" instance for importing
 detector = PoseDetector()
 

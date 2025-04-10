@@ -63,13 +63,14 @@ class ImagingThread(QThread):
     def getResults(self):
         return self.results
     
-    #obtain chest angle from last image
-    def getChestAngles(self):
+    #obtain nose pixels
+    def getPartPixels(self, partKey : str):
         if self.results is not None:
-            return self.normedToAngle(detector.getChestResults(self.results))
-        else:
-            return np.array([0,0])
-    
+            normedPx = detector.getPartResultByKey(partKey, self.results)
+            if normedPx is not None:
+                return self.normedToPx(normedPx)
+        return None
+        
     @classmethod
     def normedToPx(cls, xyNormed) -> np.ndarray:
         imgSize = np.array([cls.imageWidthResized, cls.imageHeightResized])
