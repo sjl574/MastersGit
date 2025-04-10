@@ -10,8 +10,10 @@ void flashLED(uint32_t flashes = 5);
 BasicStepperDriver upperStepper(UPPER_MOTOR_SPR, UPPER_DIR_PIN, UPPER_STEP_PIN);
 BasicStepperDriver lowerStepper(LOWER_MOTOR_SPR, LOWER_DIR_PIN, LOWER_STEP_PIN);
 //constants
-const uint32_t upperDTS = uint32_t( UPPER_GR * (UPPER_MOTOR_SPR * UPPER_MICROSTEPS) / 360.0 );
-const uint32_t lowerDTS = uint32_t( LOWER_GR * (LOWER_MOTOR_SPR * LOWER_MICROSTEPS) / 360.0 );
+const int32_t upperDTS = int32_t( (UPPER_AXIS_FLIP) * UPPER_GR * (UPPER_MOTOR_SPR * UPPER_MICROSTEPS) / 360.0 );
+const int32_t lowerDTS = int32_t( (LOWER_AXIS_FLIP) * LOWER_GR * (LOWER_MOTOR_SPR * LOWER_MICROSTEPS) / 360.0 );
+
+
 //flags
 bool upperClockwise, lowerClockwise = false;
 //func declarations

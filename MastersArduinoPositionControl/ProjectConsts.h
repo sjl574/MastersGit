@@ -14,7 +14,7 @@
 #define LOWER_MICROSTEPS 8
 //GEARING RATIO
 #define UPPER_GR 2
-#define LOWER_GR 3  //????????? CHECK THIS
+#define LOWER_GR 2
 //Speed 
 #define UPPER_MAX_RPM 100
 #define LOWER_MAX_RPM 50
@@ -26,13 +26,17 @@
 #define UPPER_DEFAULT_ACCEL 50
 #define LOWER_DEFAULT_ACCEL 50
 //Pins
-#define UPPER_DIR_PIN 13
-#define UPPER_STEP_PIN 12
-#define LOWER_DIR_PIN 11
-#define LOWER_STEP_PIN 10
+#define UPPER_DIR_PIN 11
+#define UPPER_STEP_PIN 10
+#define LOWER_DIR_PIN 13
+#define LOWER_STEP_PIN 12
 //Clearnace distance
 #define LOWER_CLEARANCE_DEG 2
 #define UPPER_CLEARANCE_DEG 2
+//Axis Flip (set to -1 for flip or 1 for not flip)
+#define UPPER_AXIS_FLIP -1
+#define LOWER_AXIS_FLIP 1
+
 
 
 /*Beam break sensor defaults*/
