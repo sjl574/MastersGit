@@ -28,7 +28,6 @@ from appFiles.timedComs import ArduinoTimedComs as ArdComs
 from appFiles.cameraThread import ImagingThread
 from appFiles.trajectories import PlotWindow
 import appFiles.arduinoCommands as AC
-import time
 import json
 
 #Toggle debug here to send debug messages to serial
