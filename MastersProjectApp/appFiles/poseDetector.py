@@ -1,11 +1,8 @@
 #My own class wrapping functionality of googles mediapipe library
 #https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker
 
-from mediapipe import solutions
-from mediapipe.framework.formats import landmark_pb2
-import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
+from ultralytics import YOLO
+import ultralytics
 import cv2 as cv
 import numpy as np
 
@@ -13,73 +10,36 @@ import os
 import sys 
 currentDir = os.path.dirname(os.path.abspath(sys.argv[0])) 
 
-poseIndexToPart = {
-    0  : "nose", 1  : "left eye (inner)", 2  : "left eye", 3  : "left eye (outer)", 4  : "right eye (inner)",
-    5  : "right eye", 6  : "right eye (outer)", 7  : "left ear", 8  : "right ear", 9  : "mouth (left)",
-    10 : "mouth (right)", 11 : "left shoulder", 12 : "right shoulder", 13 : "left elbow", 14 : "right elbow",
-    15 : "left wrist", 16 : "right wrist", 17 : "left pinky", 18 : "right pinky", 19 : "left index",
-    20 : "right index", 21 : "left thumb", 22 : "right thumb", 23 : "left hip", 24 : "right hip",
-    25 : "left knee", 26 : "right knee", 27 : "left ankle", 28 : "right ankle", 29 : "left heel",
-    30 : "right heel", 31 : "left foot index", 32 : "right foot index"
+poseIndexToPart = { 0:"Nose", 1:"Left Eye", 2:"Right Eye", 3:"Left Ear", 4:"Right Ear", 5:"Left Shoulder", 6:"Right Shoulder",
+                    7:"Left Elbow", 8:"Right Elbow", 9:"Left Wrist", 10:"Right Wrist", 11:"Left Hip", 12:"Right Hip", 13:"Left Knee",
+                    14:"Right Knee", 15:"Left Ankle", 16:"Right Ankle"
 }
 posePartToIndex = {v: k for k, v in poseIndexToPart.items()}
 
 class PoseDetector():
     #Static variables
     #model locations
-    liteModelDir = 'appFiles/Models/liteModel.task'
-    heavyModelDir = 'appFiles/Models/heavyModel.task'
+    modelDir = 'appFiles/Models/yolo11n-pose.pt'
 
     #Constructor / Intialiser
-    def __init__(self, heavyModel : bool = False):
+    def __init__(self):
         #create pose detection instance
-        modelDir = os.path.join(currentDir, PoseDetector.heavyModelDir) if heavyModel else os.path.join(currentDir, PoseDetector.liteModelDir)
-        base_options = python.BaseOptions(model_asset_path=modelDir)
-        options = vision.PoseLandmarkerOptions(base_options = base_options, output_segmentation_masks = True)
-        self.detector = vision.PoseLandmarker.create_from_options(options)
-    
+        self.detector = YOLO(os.path.join(currentDir, PoseDetector.modelDir))
+
     #Run detection on opencv obtained image (default bgr)
-    def detect(self, bgrImg : np.ndarray):
-        rgbImg = cv.cvtColor(bgrImg, cv.COLOR_BGR2RGB)
-        #convert np image array to mp image format
-        mpImg = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgbImg)
-        return self.detector.detect(mpImg)
-        
-    #Just draws on landmarks obtained:https://colab.research.google.com/github/googlesamples/mediapipe/blob/main/examples/pose_landmarker/python/%5BMediaPipe_Python_Tasks%5D_Pose_Landmarker.ipynb#scrollTo=_JVO3rvPD4RN
-    def drawLandmarks(self, img : np.ndarray, results) -> np.ndarray:
-        landmarksList = results.pose_landmarks
-        # Loop through the detected poses to visualize.
-        for idx in range(len(landmarksList)):
-            landmarks = landmarksList[idx]
-            # Draw the pose landmarks.
-            pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-            pose_landmarks_proto.landmark.extend([
-                landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in landmarks
-            ])
-            solutions.drawing_utils.draw_landmarks(
-                img,
-                pose_landmarks_proto,
-                solutions.pose.POSE_CONNECTIONS,
-                solutions.drawing_styles.get_default_pose_landmarks_style()
-            )
-        return img
-
-    #Run pose detection on image and draw landmarks, returns [drawn on image, results set]
-    def detectAndDraw(self, bgrImg : np.ndarray):
-        results = self.detect(bgrImg.copy())
-        if not results.pose_landmarks:
-            return results, bgrImg
-        else:  
-            return results, self.drawLandmarks(bgrImg, results)
-
-    
+    def detect(self, img : np.ndarray):
+        results = self.detector(img, verbose = False, conf = 0.5)[0]
+        annImage = results.plot()
+        return results, annImage
+           
     #Extract results of passed part
-    def getPartResultByKey(self, key : str, results):
+    def getPartResultByKey(self, key : str, results, id : int = 0):
         #Catch error if part doesn't exist
         try:
             index = posePartToIndex[key]
-            landmarksList = results.pose_landmarks[0]
-            return np.array([landmarksList[index].x, landmarksList[index].y])
+            landmarksList = results.keypoints.xyn.numpy()[id]
+            print(np.array([landmarksList[index][0], landmarksList[index][1]]))
+            return np.array([landmarksList[index][0], landmarksList[index][1]])
         except Exception as e:
             print(f"Requested part '{key}' does not exist - {e}")
             return None

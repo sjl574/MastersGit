@@ -40,7 +40,7 @@ class ImagingThread(QThread):
                 ImagingThread.running = False
                 print(f"Failed to read camera Image! ")
                 break
-            self.results, frame = detector.detectAndDraw(rawFrame)
+            self.results, frame = detector.detect(rawFrame)
             frame = self.cvToLabel(frame)
             #This emits a signal to the application containing the image
             self.frame_signal.emit(frame)

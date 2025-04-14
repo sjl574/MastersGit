@@ -475,7 +475,7 @@ class MyApp(QtWidgets.QMainWindow):
         #Set tracking in motion to say function is occupied
         self.trackingInMotion = True
         #only move if angle is big enough to stop constant tiny adjustments
-        xyPixels = self.cameraThread.getPartPixels("nose")
+        xyPixels = self.cameraThread.getPartPixels("Nose")
         if xyPixels is not None:
             xyAngles = self.cameraThread.pxToAngle(xyPixels)
             if (xyAngles[0] * xyAngles[0]) > self.xMinAngle:
