@@ -58,7 +58,7 @@ class ArduinoTimedComs():
         #Wrap function to protect from interrupt
         self.sending = True
         #inform of error, ret None if arduino not connected
-        if not self.connect:
+        if not self.connected:
             self.debugFunc(f"Failed To Send Arduino Message: Connection Not Established")
             return
         #combine command byte and data into into serial of bytes
