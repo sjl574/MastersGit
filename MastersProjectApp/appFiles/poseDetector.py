@@ -98,6 +98,6 @@ if __name__ == '__main__':
     while True:
         ret,img = cam.read()
         res, img = detector.detectAndDraw(img)
-        print(detector.getChestResults(res))
+        print(detector.getPartResultByKey('nose', res))
         cv.imshow("camera", img)
         cv.waitKey(10)
