@@ -26,10 +26,10 @@
 #define UPPER_DEFAULT_ACCEL 50
 #define LOWER_DEFAULT_ACCEL 50
 //Pins
-#define UPPER_DIR_PIN 11
-#define UPPER_STEP_PIN 10
-#define LOWER_DIR_PIN 13
-#define LOWER_STEP_PIN 12
+#define UPPER_DIR_PIN 13
+#define UPPER_STEP_PIN 12
+#define LOWER_DIR_PIN 11
+#define LOWER_STEP_PIN 10
 //Clearnace distance
 #define LOWER_CLEARANCE_DEG 2
 #define UPPER_CLEARANCE_DEG 2
@@ -47,8 +47,8 @@
 #define NUM_BB_SENSORS 2
 
 /*Firing Mechanism Defaults*/
-#define FIRING_LOAD_PIN 7
-#define FIRING_MOTOR_PIN 6
+#define FIRING_SERVO_PIN 4
+#define FIRING_MOTOR_PIN 5
 
 
 

@@ -1,6 +1,7 @@
 #include "projectConsts.h"
 #include "BasicStepperDriver.h"
 #include "DFRobot_LIDAR07.h"
+#include "Servo.h"
 
 //pin13 test led
 #define LED_PIN 13
@@ -29,6 +30,7 @@ void upperBBISR();
 void lowerBBISR();
 
 //firing mechanism
+Servo firingServo;
 void fireProjectile();
 
 //setup lidar
@@ -41,11 +43,16 @@ void processSerial();
 
 void setup() {
   //-----Setup pins
+  //Motor relay (do first as it will start high)
+  pinMode(FIRING_MOTOR_PIN, OUTPUT);
+  digitalWrite(FIRING_MOTOR_PIN, LOW);
   //debug led
   pinMode(LED_PIN, OUTPUT);
   //beam break interrupts
   pinMode(UPPER_BB_PIN, INPUT);
   pinMode(LOWER_BB_PIN, INPUT);
+  firingServo.attach(FIRING_SERVO_PIN);
+  firingServo.write(0);
 
   //----setup Serial comms
   Serial.begin(115200);
@@ -133,7 +140,7 @@ void processSerial(){
       moveLower(val * DEG_DECIMAL_SHIFT);
       break;
     case CMD_FIRE: //fire projectile
-      fireProjectile(val);
+      fireProjectile();
       break;
     case CMD_GET_LIDAR:
       //getLidar(&val);
@@ -154,8 +161,18 @@ void sendSerialMessage(int32_t* cmdPtr, int32_t* valPtr){
 //-----------------------------------------------COMMAND ACTION FUNCTIONS
 
 //---------------------PROJECTILE FIRING
-void fireProjectile(int32_t val){
-  //Nothing for now
+void fireProjectile(){
+  //Start motors, giving time to speed up
+  digitalWrite(FIRING_MOTOR_PIN, HIGH);
+  delay(500);
+  //Move servo to feed ball
+  firingServo.write(180);
+  delay(750);
+  //Reset firing system
+  digitalWrite(FIRING_MOTOR_PIN, LOW);
+  firingServo.write(0);
+  delay(500);
+  return;
 }
 
 
