@@ -41,7 +41,7 @@ class PoseDetector():
             print(np.array([landmarksList[index][0], landmarksList[index][1]]))
             return np.array([landmarksList[index][0], landmarksList[index][1]])
         except Exception as e:
-            print(f"Requested part '{key}' does not exist - {e}")
+            # print(f"Requested part '{key}' does not exist - {e}")
             return None
     
 
