@@ -68,7 +68,10 @@ class ImagingThread(QThread):
         if self.results is not None:
             normedPx = detector.getPartResultByKey(partKey, self.results)
             if normedPx is not None:
-                return self.normedToPx(normedPx)
+                pixels = self.normedToPx(normedPx)
+                if not pixels.all():
+                    return None
+                return pixels
         return None
         
     @classmethod

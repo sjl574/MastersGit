@@ -38,7 +38,7 @@ class PoseDetector():
         try:
             index = posePartToIndex[key]
             landmarksList = results.keypoints.xyn.numpy()[id]
-            print(np.array([landmarksList[index][0], landmarksList[index][1]]))
+            # print(np.array([landmarksList[index][0], landmarksList[index][1]]))
             return np.array([landmarksList[index][0], landmarksList[index][1]])
         except Exception as e:
             # print(f"Requested part '{key}' does not exist - {e}")
