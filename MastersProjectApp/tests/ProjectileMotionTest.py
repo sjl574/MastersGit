@@ -2,47 +2,52 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Constants
-g = 9.81  # gravity
+grav = 9.81  # gravity
+airDensity = 1.225
+dragCoefficient = 0.5
+projectileRad = 0.0215
+projectileA = projectileRad * projectileRad * 3.141
+projectileMass = 0.004 #standard are 0.004, golf style are 0.008
+dragConst = dragCoefficient * airDensity * projectileA * 0.5
+
+timeStep = 0.01 #step increments in seconds
+
 v0 = 20.0  # initial speed in m/s
-target_distance = 10.0  # meters
-target_angle_deg = 30.0  # angle from forward line
-target_radius = 0.20  # for hit detection
+target_distance = 3.0  # meters
 
-# Convert to Cartesian
-angle_rad = np.radians(target_angle_deg)
-target_x = target_distance * np.cos(angle_rad)
-target_y = target_distance * np.sin(angle_rad)
 
-# Try a range of launch angles
-angles = np.radians(np.linspace(10, 80, 300))
-hit_angle = None
+def calcDragAcc(Vx, Vy):
+    Vmag = np.sqrt(Vx * Vx + Vy * Vy)
+    Vx2 = Vx * Vmag
+    Vy2 = Vy * Vmag
+    ax = Vx2*dragConst/projectileMass
+    ay = Vy2*dragConst/projectileMass
 
-for angle in angles:
-    t = np.linspace(0, 5, num=500)
-    x = v0 * np.cos(angle) * t
-    y = v0 * np.sin(angle) * t - 0.5 * g * t**2
+def getStateOfChange(Sx, Sy, Vx, Vy):
+    #Calculate drag
+    global grav
+    ax, ay = calcDragAcc(Vx, Vy)
+    ay = grav - ay
+    ax = -ax
+    #velocity = displacement rate of change
+    #return stateOfChange
+    return Vx, Vy, ax, ay
 
-    # Collision check
-    distance = np.sqrt((x - target_x)**2 + (y - target_y)**2)
-    if np.any(distance < target_radius):
-        hit_angle = angle
-        break
+def getChange(Vx, Vy, ax, ay, deltaT):
+    #Get change in displacement over deltaT
+    deltaSx = Vx * deltaT
+    deltaSy = Vy * deltaT
+    #get change in velocity over deltaT
+    deltaAx = ax * deltaT
+    deltaAy = ay * deltaT
+    #ret
+    return deltaSx, deltaSy, deltaAx, deltaAy
 
-# Plot result
-if hit_angle is not None:
-    t = np.linspace(0, 5, num=500)
-    x = v0 * np.cos(hit_angle) * t
-    y = v0 * np.sin(hit_angle) * t - 0.5 * g * t**2
+def rk4Step(Sx, Sy, Vx, Vy, dt):
+    k1State = [Sx, Sy, Vx, Vy]
+    k1 = getStateOfChange(k1State)
+    k1Change = getChange(k1, dt)
+    k2State = k1State + k1Change
+    K2 = getStateOfChange(k2State)
 
-    mask = y >= 0
-    plt.plot(x[mask], y[mask], label=f"Hit Angle = {np.degrees(hit_angle):.2f}°")
-    plt.plot(target_x, target_y, 'ro', label="Target")
-    plt.xlabel("X (m)")
-    plt.ylabel("Y (m)")
-    plt.title("Projectile Trajectory")
-    plt.legend()
-    plt.grid(True)
-    plt.axis("equal")
-    plt.show()
-else:
-    print("No hit found for current initial speed.")
+    #Merge getStateOfChange & getChange functions into one
