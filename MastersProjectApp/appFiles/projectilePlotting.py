@@ -11,14 +11,19 @@ class MplCanvas(FigureCanvasQTAgg):
         super().__init__(fig)
 
 class PlotWindow(QtWidgets.QDialog):
-       def __init__(self, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
+
+    def plot(self, xAxis, yAxis):
+        #Setup window
         self.setWindowTitle("Trajectory Visualization")
         self.setGeometry(100, 100, 600, 400)
-
+        #Create layout
+        self.layout = QtWidgets.QVBoxLayout(self)
         #Create plot
-        sc = MplCanvas(width=5, height=4, dpi=100)
-        sc.axes.plot([0,1,2,3,4], [10,1,20,3,40])
-
+        self.canvas = MplCanvas(width=5, height=4, dpi=100)
+        self.canvas.axes.plot(xAxis, yAxis)
+        #Add plot to layout
+        self.layout.addWidget(self.canvas)
         #show window
         self.exec()

@@ -1,4 +1,4 @@
-from states import State, ChangingState
+from appFiles.states import State, ChangingState
 import numpy as np
 import math
 

@@ -1,1 +1,1 @@
-{"CameraNum": 0, "COMPORT": "COM5", "ProjectileRadius": 10, "ProjectileSpeed": 5}
+{"CameraNum": 0, "COMPORT": "COM13", "ProjectileInfo": {"Radius": 0.0425, "Mass": 0.004, "InitialVelocity": 5.0, "TimeStep": 0.01, "DragCoefficient": 0.5}}

@@ -26,7 +26,8 @@ import serial.tools.list_ports
 import serial
 from appFiles.timedComs import ArduinoTimedComs as ArdComs
 from appFiles.cameraThread import ImagingThread
-from appFiles.trajectories import PlotWindow
+from appFiles.projectileMotion import ProjectileMotion
+import matplotlib.pyplot as plt
 import appFiles.arduinoCommands as AC
 import json
 
@@ -59,11 +60,17 @@ class MyApp(QtWidgets.QMainWindow):
     runCamera = False
     jsonDir = 'appFiles/defaultData.json'
     projectileTypes = ["Cylinder", "Sphere"]
+    projectileDict = {
+        'Radius' : 10,
+        'Mass' : 0.04,
+        'InitialVelocity' : 5,
+        'TimeStep' : 0.01,
+        'DragCoefficient' : 0.5
+    }
     settingsDict = {
         'CameraNum' : 0,
         'COMPORT' : None,
-        'ProjectileRadius' : 10,
-        'ProjectileSpeed' : 5,
+        'ProjectileInfo' : projectileDict
     }
 
     def __init__(self):
@@ -76,8 +83,10 @@ class MyApp(QtWidgets.QMainWindow):
         self.yMinAngle = 1
         self.xMotion = False
         self.yMotion = False
+        self.projMotion = ProjectileMotion()
         #setup window
         self.readDefaultsJson()
+        self.updateProjectileSettings()
         self.setupUi()
         self.show()
 
@@ -148,14 +157,14 @@ class MyApp(QtWidgets.QMainWindow):
         self.SettingsTab.setObjectName("SettingsTab")
         self.gridLayout = QtWidgets.QGridLayout(self.SettingsTab)
         self.gridLayout.setObjectName("gridLayout")
-
+        #Camera Number Label + LineEdit
         self.CameraNumberLabel = QtWidgets.QLabel(self.SettingsTab)
         self.CameraNumberLabel.setObjectName("CameraNumberLabel")
         self.gridLayout.addWidget(self.CameraNumberLabel, 0, 0, 1, 1)
         self.CameraNumberLE = QtWidgets.QLineEdit(self.SettingsTab)
         self.CameraNumberLE.setObjectName("CameraNumberLE")
         self.gridLayout.addWidget(self.CameraNumberLE, 0, 2, 1, 1)
-
+        #COM PORT Label + LineEdit
         self.ComPortLabel = QtWidgets.QLabel(self.SettingsTab)
         self.ComPortLabel.setObjectName("ComPortLabel")
         self.gridLayout.addWidget(self.ComPortLabel, 1, 0, 1, 1)
@@ -165,24 +174,45 @@ class MyApp(QtWidgets.QMainWindow):
         self.refreshComButton = QtWidgets.QPushButton(self.SettingsTab)
         self.refreshComButton.setObjectName("Refresh COM Ports")
         self.gridLayout.addWidget(self.refreshComButton, 1, 3, 1, 1)
-
+        #Projectile Radius Label + LineEdit
         self.RadiusLabel = QtWidgets.QLabel(self.SettingsTab)
         self.RadiusLabel.setObjectName("RadiusLabel")
         self.gridLayout.addWidget(self.RadiusLabel, 2, 0, 1, 1)
-        self.ProjectileRadiusLE = QtWidgets.QLineEdit(self.SettingsTab)
-        self.ProjectileRadiusLE.setObjectName("ProjectileRadiusLE")
-        self.gridLayout.addWidget(self.ProjectileRadiusLE, 2, 1, 1, 2)
-
-        self.SpeedLabel = QtWidgets.QLabel(self.SettingsTab)
-        self.SpeedLabel.setObjectName("SpeedLabel")
-        self.gridLayout.addWidget(self.SpeedLabel,3, 0, 1, 1)
-        self.SpeedLE = QtWidgets.QLineEdit(self.SettingsTab)
-        self.SpeedLE.setObjectName("SpeedLE")
-        self.gridLayout.addWidget(self.SpeedLE,3, 1, 1, 2)     
-
+        self.RadiusLE = QtWidgets.QLineEdit(self.SettingsTab)
+        self.RadiusLE.setObjectName("RadiusLE")
+        self.gridLayout.addWidget(self.RadiusLE, 2, 1, 1, 2)
+        #Projectile Mass Label + LineEdit
+        self.MassLabel = QtWidgets.QLabel(self.SettingsTab)
+        self.MassLabel.setObjectName("MassLabel")
+        self.gridLayout.addWidget(self.MassLabel, 3, 0, 1, 1)
+        self.MassLE = QtWidgets.QLineEdit(self.SettingsTab)
+        self.MassLE.setObjectName("MassLE")
+        self.gridLayout.addWidget(self.MassLE, 3, 1, 1, 2)
+        #Initial Velocity Label + LineEdit
+        self.InitVelLabel = QtWidgets.QLabel(self.SettingsTab)
+        self.InitVelLabel.setObjectName("InitVelLabel")
+        self.gridLayout.addWidget(self.InitVelLabel,4, 0, 1, 1)
+        self.InitVelLE = QtWidgets.QLineEdit(self.SettingsTab)
+        self.InitVelLE.setObjectName("InitVelLE")
+        self.gridLayout.addWidget(self.InitVelLE,4, 1, 1, 2)   
+        #Time Step Label + LineEdit
+        self.TimeStepLabel = QtWidgets.QLabel(self.SettingsTab)
+        self.TimeStepLabel.setObjectName("TimeStepLabel")
+        self.gridLayout.addWidget(self.TimeStepLabel,5, 0, 1, 1)
+        self.TimeStepLE = QtWidgets.QLineEdit(self.SettingsTab)
+        self.TimeStepLE.setObjectName("TimeStepLE")
+        self.gridLayout.addWidget(self.TimeStepLE,5, 1, 1, 2)    
+        #Drag Coefficient Label + LineEdit
+        self.DragCoLabel = QtWidgets.QLabel(self.SettingsTab)
+        self.DragCoLabel.setObjectName("DragCoLabel")
+        self.gridLayout.addWidget(self.DragCoLabel,6, 0, 1, 1)
+        self.DragCoLE = QtWidgets.QLineEdit(self.SettingsTab)
+        self.DragCoLE.setObjectName("DragCoLE")
+        self.gridLayout.addWidget(self.DragCoLE,6, 1, 1, 2)     
+        #Apply Setting Button
         self.ApplySettings = QtWidgets.QPushButton(self.SettingsTab)
         self.ApplySettings.setObjectName("ApplySettings")
-        self.gridLayout.addWidget(self.ApplySettings, 4, 3, 1, 1)
+        self.gridLayout.addWidget(self.ApplySettings, 6, 3, 1, 1)
         self.tabWidget.addTab(self.SettingsTab, "")
         self.verticalLayout_2.addWidget(self.tabWidget)
         
@@ -246,9 +276,18 @@ class MyApp(QtWidgets.QMainWindow):
         self.TerminalScroller.append("Window Booted")
 
 
-
     def showTrajectoryFunc(self):
-        testPlot = PlotWindow()
+        xyArray = self.projMotion.getDragMotion()[0]
+        xyNoDragA = self.projMotion.getNoDragMotion()[0]
+        plt.plot(xyArray[:,0], xyArray[:,1], marker='o', label='Drag')     # line + optional markers
+        plt.plot(xyNoDragA[:,0], xyNoDragA[:,1], marker='x', label='No Drag')     # line + optional markers
+        plt.legend()
+        plt.xlabel('x (m)')
+        plt.ylabel('y (m)')
+        plt.title('Object trajectory')
+        plt.axis('equal')              # equal aspect ratio so 1 m in x = 1 m in y
+        plt.grid(True)
+        plt.show()
 
 
     ##--------------------------------UI FUNCTIONS
@@ -268,13 +307,19 @@ class MyApp(QtWidgets.QMainWindow):
         self.ComPortLabel.setText(_translate(WINDOW_NAME, "System COM Port"))
         self.refreshComButton.setText(_translate(WINDOW_NAME, "Refresh"))
         self.ApplySettings.setText(_translate(WINDOW_NAME, "Apply"))
-        self.RadiusLabel.setText(_translate(WINDOW_NAME, "Radius"))
-        self.SpeedLabel.setText(_translate(WINDOW_NAME, "Speed m/s"))
+        self.RadiusLabel.setText(_translate(WINDOW_NAME, "Radius [m]"))
+        self.MassLabel.setText(_translate(WINDOW_NAME, "Mass [kg]"))
+        self.InitVelLabel.setText(_translate(WINDOW_NAME, "Initial Velocity [m/s]"))
+        self.TimeStepLabel.setText(_translate(WINDOW_NAME, "Time Set [s]"))
+        self.DragCoLabel.setText(_translate(WINDOW_NAME, "Drag Coefficient"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.SettingsTab), _translate(WINDOW_NAME, "Settings"))
         #Set current values of Line edits
         self.CameraNumberLE.setText(str(MyApp.settingsDict['CameraNum']))
-        self.ProjectileRadiusLE.setText(str(MyApp.settingsDict['ProjectileRadius']))
-        self.SpeedLE.setText(str(MyApp.settingsDict['ProjectileSpeed']))
+        self.RadiusLE.setText(str(MyApp.settingsDict['ProjectileInfo']['Radius']))
+        self.MassLE.setText(str(MyApp.settingsDict['ProjectileInfo']['Mass']))
+        self.InitVelLE.setText(str(MyApp.settingsDict['ProjectileInfo']['InitialVelocity']))
+        self.TimeStepLE.setText(str(MyApp.settingsDict['ProjectileInfo']['TimeStep']))
+        self.DragCoLE.setText(str(MyApp.settingsDict['ProjectileInfo']['DragCoefficient']))
         #set current values of combo boxes
         if MyApp.settingsDict['COMPORT'] in self.COMPORTS.values():
             self.ComPortCombo.setCurrentIndex(list(self.COMPORTS.values()).index(MyApp.settingsDict['COMPORT']))
@@ -334,32 +379,46 @@ class MyApp(QtWidgets.QMainWindow):
         for key,_ in list(self.COMPORTS.items()):
             self.ComPortCombo.addItem(key)
 
+    #Update variables used for projectile settings calculations
+    def updateProjectileSettings(self):
+        self.projMotion.projectileRad = self.settingsDict['ProjectileInfo']['Radius']
+        self.projMotion.projectileMass = self.settingsDict['ProjectileInfo']['Mass']
+        self.projMotion.initialVelocity = self.settingsDict['ProjectileInfo']['InitialVelocity']
+        self.projMotion.timeStep = self.settingsDict['ProjectileInfo']['TimeStep']
+        self.projMotion.dragCoefficient = self.settingsDict['ProjectileInfo']['DragCoefficient']
+
+    def isNumber(self, val):
+        try:
+            float(val)
+            return True
+        except Exception:
+            return False
+
     #Apply settings as currently written in settings tab
     def applySettingsFunc(self):
+        #####HARDWARE SETTINGS
         #Get camera Number (only accepts number if entry is all digits)
         holdval = self.CameraNumberLE.text()
         if not any(not char.isdigit() for char in holdval) and len(holdval) > 0:
             MyApp.settingsDict['CameraNum'] = int(holdval)
         self.CameraNumberLE.setText(holdval)
-        #Get radius
-        holdval = self.ProjectileRadiusLE.text()
-        if not any(not char.isdigit() for char in holdval) and len(holdval) > 0:
-            MyApp.settingsDict['ProjectileRadius'] = int(holdval)
-        self.ProjectileRadiusLE.setText(holdval)
-        #get Speed
-        holdval = self.SpeedLE.text()
-        if not any(not char.isdigit() for char in holdval) and len(holdval) > 0:
-            MyApp.settingsDict['ProjectileSpeed'] = int(holdval)
-        self.SpeedLE.setText(holdval)
         #Set arduino comport
         MyApp.settingsDict['COMPORT'] = self.COMPORTS[self.ComPortCombo.currentText()]
+        #####PROJECTILE SETTINGS
+        projectileLEs = [self.RadiusLE, self.MassLE, self.InitVelLE, self.TimeStepLE, self.DragCoLE]
+        keys = list(MyApp.settingsDict['ProjectileInfo'].keys())
+        for indx, key in enumerate(keys):
+            holdVal = projectileLEs[indx].text()
+            if self.isNumber(holdVal) and len(holdVal) > 0:
+                MyApp.settingsDict['ProjectileInfo'][key] = float(holdVal)
+            projectileLEs[indx].setText(holdVal)
+        ###SAVE
+        #Update projectile Calculation settings
+        self.updateProjectileSettings()
         #Save settings to file
         self.writeDefaultsJson()
         #DEBUG serial output
-        self.TerminalScroller.append(f"Settings Applied:")
-        self.TerminalScroller.append(f"Camera: {str(MyApp.settingsDict['CameraNum'])}")
-        self.TerminalScroller.append(f"Ard Com: {MyApp.settingsDict['COMPORT']}")
-        self.TerminalScroller.append(f"Proj Rad: {str(MyApp.settingsDict['ProjectileRadius'])}")
+        self.TerminalScroller.append(f"Settings Applied: {str(MyApp.settingsDict)}")
 
 
 
