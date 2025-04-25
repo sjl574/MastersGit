@@ -69,12 +69,6 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(UPPER_BB_PIN), upperBBISR, RISING);
   attachInterrupt(digitalPinToInterrupt(LOWER_BB_PIN), lowerBBISR, RISING);
 
-  //Motor boot sequence (Must be before interrupts set as this will pass them)
-  // motorBootSequence();
-
-  //Setup firing mechanism
-  //.....
-
   //Setup Lidar
   if(!lidar.begin()){
     flashLED(0);
@@ -83,14 +77,17 @@ void setup() {
   lidar.startFilter();
   lidar.setMeasureMode(lidar.eLidar07Single);
 
+  //delay as interrupts tend to self trigger on boot
+  delay(500);
 
+  //Motor boot sequence (loads axis into start position relative to bb sensors)
+  motorBootSequence();
 
   //Setup End
 }
 
 void loop() {
   //main setup
-  flashLED(3);
   int32_t const UPPER_OOB = CMD_MOTOR_UPPER_OOB;
   int32_t const LOWER_OOB = CMD_MOTOR_LOWER_OOB;
   int32_t const nullVal = 0x00;
@@ -99,15 +96,15 @@ void loop() {
     //check serial comms for message
     processSerial();
 
-    // //check flags for motion failures (bb flags, etc)
-    // if(bbLowerFlag){
-    //   lowerMotorClearance();
-    //   sendSerialMessage(&LOWER_OOB, &nullVal)
-    // }
-    // if(bbUpperFlag){
-    //   upperMotorClearance();
-    //   sendSerialMessage(&UPPER_OOB, &nullVal)
-    // }
+    //check flags for motion failures (bb flags, etc)
+    if(bbLowerFlag){
+      lowerMotorClearance();
+      sendSerialMessage(&LOWER_OOB, &nullVal);
+    }
+    if(bbUpperFlag){
+      upperMotorClearance();
+      sendSerialMessage(&UPPER_OOB, &nullVal);
+    }
     
   }//main loop end
 }//arduino loop end
@@ -233,9 +230,9 @@ void lowerMotorClearance(){
 void upperMotorClearance(){
   //check direction moving when interrupt occured
   if(upperClockwise){
-    upperStepper.move(UPPER_CLEARANCE_DEG * upperDTS);
-  }else{
     upperStepper.move(-1 * UPPER_CLEARANCE_DEG * upperDTS);
+  }else{
+    upperStepper.move(UPPER_CLEARANCE_DEG * upperDTS);
   }
   //should be clear now, reset flag
   bbUpperFlag = false;
@@ -243,15 +240,15 @@ void upperMotorClearance(){
 
 //Pulls motors into central positions
 void motorBootSequence(void){
-  //Upper axis first (this will move until hits bb) (or if bb not working just put in place)
-  moveUpper(90.0); 
-  //if successfully hit bb sensor, move up 30deg for clearance
-  if(bbUpperFlag){
-    moveUpper(30.0);
-    bbUpperFlag = false;
-  }
-  //No motion for lower axis (this should be manually set before system setup)  
-  //this is because we have no idea what startup position is unlike upper which should always fall down
+  //reset upper
+  moveUpper(-20.0);  
+  moveUpper(UPPER_CLEARANCE_DEG);
+  //reset lower
+  moveLower(20.0);
+  moveLower(-90.0);
+  //Clear flags that would have been set from collisions
+  bbUpperFlag = false;
+  bbLowerFlag = false;
 }
 
 

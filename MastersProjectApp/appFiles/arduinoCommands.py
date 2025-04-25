@@ -3,6 +3,8 @@ COMMAND_MOVE_UPPER = 0x01
 COMMAND_MOVE_LOWER = 0x02
 COMMAND_FIRE = 0x03
 COMMAND_LIDAR = 0x04
+COMMAND_UPPER_OOB = 0x05
+COMMAND_LOWER_OOB = 0x06
 
 #Amount degrees are shifted for float to integer conversion before sent over comms (this is inverse)
 DEG_DECIMAL_SHIFT = 0.01

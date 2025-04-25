@@ -31,8 +31,8 @@
 #define LOWER_DIR_PIN 11
 #define LOWER_STEP_PIN 10
 //Clearnace distance
-#define LOWER_CLEARANCE_DEG 2
-#define UPPER_CLEARANCE_DEG 2
+#define LOWER_CLEARANCE_DEG 20
+#define UPPER_CLEARANCE_DEG 5
 //Axis Flip (set to -1 for flip or 1 for not flip)
 #define UPPER_AXIS_FLIP -1
 #define LOWER_AXIS_FLIP 1

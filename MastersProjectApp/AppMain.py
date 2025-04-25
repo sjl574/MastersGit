@@ -83,6 +83,10 @@ class MyApp(QtWidgets.QMainWindow):
         self.yMinAngle = 1
         self.xMotion = False
         self.yMotion = False
+        self.upperAngleHold = -45
+        self.OOBangle = -45
+        self.lidarVal = 0
+        self.awaitingLidar = False
         self.projMotion = ProjectileMotion()
         #setup window
         self.readDefaultsJson()
@@ -468,8 +472,14 @@ class MyApp(QtWidgets.QMainWindow):
         elif command == AC.COMMAND_MOVE_UPPER:
             self.yMotion = False
         elif command == AC.COMMAND_LIDAR:
+            self.awaitingLidar = False
+            self.lidarVal = value
             self.terminalDebugger(f"LIDAR RECIEVED: {value}mm")
-
+        elif command == AC.COMMAND_UPPER_OOB:
+            self.terminalDebugger(f"UPPER Out Of Bounds!")
+            self.upperAngleHold = self.OOBangle
+        elif command == AC.COMMAND_LOWER_OOB:
+            self.terminalDebugger(f"LOWER Out Of Bounds!")
 
     #--------------------PHYSICAL ACTION COMMANDS
 
@@ -497,9 +507,38 @@ class MyApp(QtWidgets.QMainWindow):
         #fire projectile
         self.messageArduino(AC.COMMAND_FIRE, 6)
 
+    #Simply shoots projectile, no compensation
+    def fireProjectileBasic(self):
+        self.TerminalScroller.append("Firing Projectile!")
+        self.messageArduino(AC.COMMAND_FIRE, 6)
+
+    #Calculates projectile motion without drag then fires
+    def fireProjectileNoDrag(self):
+        #Get IR Distance
+        self.getLidarFunc()
+        while self.awaitingLidar:
+            None #wait for lidar
+        #Update projectile motion calculator
+        self.projMotion.targetDistance = self.lidarVal
+        #Func needed for getting angle required from target distance (no drag)
+        self.TerminalScroller.append("Firing Projectile!")
+        self.messageArduino(AC.COMMAND_FIRE, 6)
+
+    #calculates projectile motion with drag then fires
+    def fireProjectileDrag(self):
+        self.getLidarFunc()
+        while self.awaitingLidar:
+            None #wait for lidar
+        #Update projectile motion calculator
+        self.projMotion.targetDistance = self.lidarVal
+        #Func needed for getting angle required from target distance (with drag)
+        self.TerminalScroller.append("Firing Projectile!")
+        self.messageArduino(AC.COMMAND_FIRE, 6)
+
     #Retrieve current lidar distance from arduino
     def getLidarFunc(self):
         self.terminalDebugger("Retrieving Current Lidar...")
+        self.awaitingLidar = True
         self.messageArduino(AC.COMMAND_LIDAR,0)
 
     #send motor x movement command to arduino
@@ -517,6 +556,8 @@ class MyApp(QtWidgets.QMainWindow):
         self.xMotion = True #Flag motors in motion
 
     def moveMotorY(self, angle):
+        #Record motion
+        self.upperAngleHold += angle
         #Dont send signal if already in / awaiting motion
         if self.yMotion:
             return
@@ -528,6 +569,7 @@ class MyApp(QtWidgets.QMainWindow):
         #send arduino command
         ret = self.messageArduino(AC.COMMAND_MOVE_UPPER, int(angle / AC.DEG_DECIMAL_SHIFT))
         self.yMotion = True #flag motors in motion
+
         
     #Called upon each new image when tracking is enabled
     def track(self):
