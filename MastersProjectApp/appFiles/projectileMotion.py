@@ -9,7 +9,7 @@ class ProjectileMotion:
     AIR_DENSITY = 1.225
 
     def __init__(self, dragCoefficient = 0.5, projectileRad = 0.0215, projectileMass = 0.004, 
-                        targetDistance = 3.0, launchDegrees = 45, timeStep = 0.01, initialVelocity = 20.0):
+                        launchDegrees = 45, timeStep = 0.01, initialVelocity = 20.0):
             #Custom Set variables
             #Private controlled variables
             self._dragCoef = dragCoefficient
@@ -18,11 +18,14 @@ class ProjectileMotion:
             self._launchDeg = launchDegrees
             self._v0 = initialVelocity
             #public uncontrolled variables
-            self.targetDistance = targetDistance
+            self._targetDistance = None
+            self._targetAngle = None
+            self._targetCoords = None
+            #Public controlled variables
             self.timeStep = timeStep
             #Calculated variables
             self.__calcDragConst()
-            self.__calcV0()
+            self.__calcVxy0()
 
     #------------Privately controlled equation consts
     @property
@@ -50,7 +53,7 @@ class ProjectileMotion:
     def launchDegrees(self, degrees):
         self._launchDeg = degrees
         #recalc velocity components on change to launch angle
-        self.__calcV0()
+        self.__calcVxy0()
 
     @property
     def initialVelocity(self):
@@ -59,7 +62,7 @@ class ProjectileMotion:
     def initialVelocity(self, vel):
         self._v0 = vel
         #recalc velocity components on change to launch velocity
-        self.__calcV0()
+        self.__calcVxy0()
 
     @property
     def projectileMass(self):
@@ -75,7 +78,7 @@ class ProjectileMotion:
         self._dragConst = self._dragCoef * self.AIR_DENSITY * self._projA * 0.5
 
     #Calculate velocity x and y constituents from magnitude and launch angle
-    def __calcV0(self):
+    def __calcVxy0(self):
         self._launchRad = math.radians(self._launchDeg)
         self._vx0 = self._v0 * math.cos(self._launchRad)
         self._vy0 = self._v0 * math.sin(self._launchRad)
@@ -158,6 +161,38 @@ class ProjectileMotion:
         noDragMotion = np.array(noDragMotion)
         tArray = np.array(tArray)
         return noDragMotion, tArray
+    
+    def __calcNoDragAngle(self):
+        #Use quadratic equation to solve for angle
+        a = self.GRAV * self._targetCoords[0] * self._targetCoords[0]
+        b = -2 * self._v0 * self._v0 * self._targetCoords[0]
+        c = self.GRAV * self._targetCoords[0] * self._targetCoords[0] + 2*self._v0*self._v0 * self._targetCoords[1]
+        #check descriminate for solution
+        descriminate = b*b - 4*a*c
+        if descriminate < 0:
+            #ret None if no solutions
+            return None
+        theta1 = math.degrees(math.atan((-b + math.sqrt(descriminate)) / 2*a))
+        theta2 = math.degrees(math.atan((-b - math.sqrt(descriminate)) / 2*a))
+        #return lower angle solution
+        if theta1 < theta2:
+            return theta1
+        else:
+            return theta2
+
+    def __calcDragAngle(self):
+        None
+
+    #Calculate angle required to hit target with current parameters at given distance (toggle drag)
+    def calculateAngle(self, targetDistance, targetAngle, drag = True):
+        self._targetDistance = targetDistance
+        self._targetAngle = targetAngle
+        self._targetCoords = self._targetDistance * np.array([math.cos(math.radians(self._targetAngle)), math.sin(math.radians(self._targetAngle))])
+        if drag:
+            return self.__calcDragAngle()
+        else:
+            return self.__calcNoDragAngle()
+
 
 #example
 if __name__ == "__main__":
