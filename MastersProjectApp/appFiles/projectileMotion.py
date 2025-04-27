@@ -11,8 +11,8 @@ class ProjectileMotion:
     GRAV = 9.81 
     AIR_DENSITY = 1.225
 
-    def __init__(self, dragCoefficient = 0.5, projectileRad = 0.0215, projectileMass = 0.004, 
-                        launchDegrees = 45, timeStep = 0.01, initialVelocity = 20.0):
+    def __init__(self, dragCoefficient = 0.5, projectileRad = 0.0215, projectileMass = 0.004, targetRadius = 0.1,
+                        launchDegrees = 45, timeStep = 0.01, initialVelocity = 20.0, maxAngle = 70):
             #Custom Set variables
             #Private controlled variables
             self._dragCoef = dragCoefficient
@@ -20,6 +20,8 @@ class ProjectileMotion:
             self._projM = projectileMass
             self._launchDeg = launchDegrees
             self._v0 = initialVelocity
+            self._maxAngle = maxAngle
+            self._targetRadius = targetRadius
             #public uncontrolled variables
             self._targetDistance = None
             self._targetAngle = None
@@ -135,7 +137,7 @@ class ProjectileMotion:
         dragMotion = [dragState.displacement]
         tArray = [t]
         #iterate across time intervals
-        while (dragMotion[-1][1] >= 0) and t < tLim:
+        while (dragMotion[-1][1] >= -1) and t < tLim:
             t += self.timeStep
             dragState = self.__rk4Step(dragState)
             dragMotion.append(dragState.displacement)
@@ -145,6 +147,7 @@ class ProjectileMotion:
         tArray = np.array(tArray)
         return dragMotion, tArray
     
+    #Get x,y coordinates of a trajectory not compensating for drag, (set parameters using properties)
     def getNoDragMotion(self, tLim = 10):
         #Create inital state
         noDragState = State()
@@ -155,7 +158,7 @@ class ProjectileMotion:
         noDragMotion = [noDragState.displacement]
         tArray = [t]
         #iterate across time intervals
-        while (noDragMotion[-1][1] >= 0) and t < tLim:
+        while (noDragMotion[-1][1] >= -1) and t < tLim:
             t += self.timeStep
             noDragState = self.__nonDragStep(noDragState)
             noDragMotion.append(noDragState.displacement)
@@ -165,6 +168,7 @@ class ProjectileMotion:
         tArray = np.array(tArray)
         return noDragMotion, tArray
     
+    #calculate angle required for projectile target collision using simple projectile motion
     def __calcNoDragAngle(self):
         #Use quadratic equation to solve for angle
         a = self.GRAV * self._targetCoords[0]**2
@@ -179,29 +183,79 @@ class ProjectileMotion:
         theta2 = math.degrees(math.atan((-b - math.sqrt(descriminate)) / (2*a)))
         #return lower angle solution
         return theta1, theta2
-        if theta1 < theta2:
-            return theta1
-        else:
-            return theta2
 
+    #Get min error (+error = overshoot, negative = undershoot)
+    def __getTrajectoryMinError(self, xyArray, xyTarget):
+            xArray, yArray = xyArray[:,0], xyArray[:,1]
+            #get closest position relative to target
+            errorDists = np.sqrt((xArray - xyTarget[0])**2 + (yArray - xyTarget[1])**2)
+            minErrIndx = np.argmin(errorDists)
+            if (xyArray[minErrIndx][1] > xyTarget[1]):
+                error = errorDists[minErrIndx]
+            else:
+                error = errorDists[minErrIndx] * (-1)
+            return error
 
-    def __calcDragAngle(self):
-        None
+    #Calculate angle required for projectile target collision compensating for drag effects
+    def __calcDragAngle(self, maxIterations = 20):
+        #get drag motion over a range of launch angles until an over an underestimate is provided, then apply bisection search
+        lastAngle = 0
+        success = False
+        for angle in range(0, self._maxAngle + 1, 10):
+            self.launchDegrees = angle
+            motion = self.getDragMotion()[0]
+            error = self.__getTrajectoryMinError(motion, self._targetCoords)
+            if error > 0:
+                success = True
+                break
+            else:
+                lastAngle = angle
+        #report None if not possible
+        if not success:
+            return None
+        #apply bisector search between found over / under estimate
+        lowAngle = lastAngle
+        highAngle = angle
+        for _ in range(maxIterations):
+            angle = (lowAngle + highAngle)/2
+            self.launchDegrees = angle
+            motion = self.getDragMotion()[0]
+            error = self.__getTrajectoryMinError(motion, self._targetCoords)
+            #if error mag is within target radius, success
+            if abs(error) < self._targetRadius:
+                return angle
+            else:
+                if error > 0:
+                    highAngle = angle
+                else:
+                    lowAngle = angle
+        #No solution, ret None
+        print("NO BISECTION SOLUTION")
+        return None
 
     #Calculate angle required to hit target with current parameters at given distance (toggle drag)
     def calculateAngle(self, targetDistance, targetAngle, drag = True):
         self._targetDistance = targetDistance
         self._targetAngle = targetAngle
-        self._targetCoords = self._targetDistance * np.array([math.cos(math.radians(self._targetAngle)), math.sin(math.radians(self._targetAngle))])
+        self._targetCoords = self.getTargetCoords(targetDistance, targetAngle)
         if drag:
             return self.__calcDragAngle()
         else:
             return self.__calcNoDragAngle()
 
+    #Get target coordinates from passed distance and angle
+    def getTargetCoords(self, targetDistance, targetAngle):
+        return targetDistance * np.array([math.cos(math.radians(targetAngle)), math.sin(math.radians(targetAngle))])  
 
-    def plotMPL(self, xyResults, show = True):
+    #Plot figure using matplotlib
+    def plotMPL(self, xyResults, show = True, newFig = False, markType = 'o'):
+        #Clear figure if new
+        if newFig:
+            plt.clf()
+        #Split results into x and y arrays
         xd, xy = xyResults[:,0], xyResults[:,1]
-        plt.plot(xd, xy, marker='o')     # line + optional markers
+        #plot figures
+        plt.plot(xd, xy, marker= markType)     # line + optional markers
         plt.xlabel('x (m)')
         plt.ylabel('y (m)')
         plt.title('Object trajectory')
@@ -209,6 +263,7 @@ class ProjectileMotion:
         plt.grid(True)
         if show == True:
             plt.show()
+        
 
 #example
 if __name__ == "__main__":
@@ -217,16 +272,34 @@ if __name__ == "__main__":
     #create projectile motion calculator using defaults
     motioncal = ProjectileMotion()
 
-    #can change any properties if needed:
-    # motioncal.launchDegrees = 50
-    # #get and plot results
-    # motioncal.plotMPL(motioncal.getDragMotion()[0]) #[0] = displacement, [1] = time steps
-    # motioncal.plotMPL(motioncal.getNoDragMotion()[0])
+    #PLOT CURRENT TRAJECTORY
+    def currentTrajectoryExample():
+        # can change any properties if needed:
+        motioncal.launchDegrees = 50
+        #get and plot results
+        motioncal.plotMPL(motioncal.getDragMotion()[0]) #[0] = displacement, [1] = time steps
+        motioncal.plotMPL(motioncal.getNoDragMotion()[0])
 
-    theta1, theta2 = motioncal.calculateAngle(3,40, False)
-    motioncal.launchDegrees = theta1
-    motioncal.plotMPL(motioncal.getNoDragMotion()[0], False)
-    motioncal.launchDegrees = theta2
-    motioncal.plotMPL(motioncal.getNoDragMotion()[0], True)
+    #FIND and PLOT A TRAJECTORY TO HIT A TARGET
+    def noDragExample():
+        targetX, targetY = motioncal.getTargetCoords(3, 40)
+        theta1, theta2 = motioncal.calculateAngle(3,40, False)
+        motioncal.launchDegrees = theta1
+        motioncal.plotMPL(motioncal.getNoDragMotion()[0], False)
+        plt.scatter(targetX, targetY, color='green', label='Target', s=300, edgecolors='black', marker = 'x',  zorder=5)
+        print(f"Angles: {theta1}, {theta2}")
+        motioncal.launchDegrees = theta2
+        motioncal.plotMPL(motioncal.getNoDragMotion()[0])
+
+    #Find and plot trajectory to hit target compensating for drag
+    def dragExample():
+        targetX, targetY = motioncal.getTargetCoords(2, 20)
+        theta = motioncal.calculateAngle(2,20,True)
+        print(f"DRAG ANGLE: {theta}")
+        motioncal.launchDegrees = theta
+        plt.scatter(targetX, targetY, color='green', label='Target', s=300, marker = 'x',  zorder=5)
+        motioncal.plotMPL(motioncal.getNoDragMotion()[0], True)
+
+    dragExample()
 
 
