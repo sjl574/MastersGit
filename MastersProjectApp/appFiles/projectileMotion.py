@@ -1,4 +1,7 @@
-from appFiles.states import State, ChangingState
+if __name__ != "__main__":
+    from appFiles.states import State, ChangingState
+else:
+    from states import State, ChangingState
 import numpy as np
 import math
 
@@ -164,21 +167,23 @@ class ProjectileMotion:
     
     def __calcNoDragAngle(self):
         #Use quadratic equation to solve for angle
-        a = self.GRAV * self._targetCoords[0] * self._targetCoords[0]
-        b = -2 * self._v0 * self._v0 * self._targetCoords[0]
-        c = self.GRAV * self._targetCoords[0] * self._targetCoords[0] + 2*self._v0*self._v0 * self._targetCoords[1]
+        a = self.GRAV * self._targetCoords[0]**2
+        b = -2 * self._v0**2 * self._targetCoords[0]
+        c = self.GRAV * self._targetCoords[0]**2 + 2*self._v0**2 * self._targetCoords[1]
         #check descriminate for solution
-        descriminate = b*b - 4*a*c
+        descriminate = b**2 - 4*a*c
         if descriminate < 0:
             #ret None if no solutions
             return None
-        theta1 = math.degrees(math.atan((-b + math.sqrt(descriminate)) / 2*a))
-        theta2 = math.degrees(math.atan((-b - math.sqrt(descriminate)) / 2*a))
+        theta1 = math.degrees(math.atan((-b + math.sqrt(descriminate)) / (2*a)))
+        theta2 = math.degrees(math.atan((-b - math.sqrt(descriminate)) / (2*a)))
         #return lower angle solution
+        return theta1, theta2
         if theta1 < theta2:
             return theta1
         else:
             return theta2
+
 
     def __calcDragAngle(self):
         None
@@ -194,26 +199,34 @@ class ProjectileMotion:
             return self.__calcNoDragAngle()
 
 
+    def plotMPL(self, xyResults, show = True):
+        xd, xy = xyResults[:,0], xyResults[:,1]
+        plt.plot(xd, xy, marker='o')     # line + optional markers
+        plt.xlabel('x (m)')
+        plt.ylabel('y (m)')
+        plt.title('Object trajectory')
+        plt.axis('equal')              # equal aspect ratio so 1 m in x = 1 m in y
+        plt.grid(True)
+        if show == True:
+            plt.show()
+
 #example
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     #create projectile motion calculator using defaults
     motioncal = ProjectileMotion()
+
     #can change any properties if needed:
-    motioncal.launchDegrees = 50
-    #get set of results
-    dragPositions = motioncal.getDragMotion()[0]    #[0] = displacement, [1] = time steps
-    noDragPositions = motioncal.getNoDragMotion()[0]
+    # motioncal.launchDegrees = 50
+    # #get and plot results
+    # motioncal.plotMPL(motioncal.getDragMotion()[0]) #[0] = displacement, [1] = time steps
+    # motioncal.plotMPL(motioncal.getNoDragMotion()[0])
 
-    xd, xy = dragPositions[:,0], dragPositions[:,1]
-    xnd, ynd = noDragPositions[:,0], noDragPositions[:,1]
+    theta1, theta2 = motioncal.calculateAngle(3,40, False)
+    motioncal.launchDegrees = theta1
+    motioncal.plotMPL(motioncal.getNoDragMotion()[0], False)
+    motioncal.launchDegrees = theta2
+    motioncal.plotMPL(motioncal.getNoDragMotion()[0], True)
 
-    plt.plot(xd, xy, marker='o')     # line + optional markers
-    plt.plot(xnd, ynd, marker='x')     # line + optional markers
-    plt.xlabel('x (m)')
-    plt.ylabel('y (m)')
-    plt.title('Object trajectory')
-    plt.axis('equal')              # equal aspect ratio so 1 m in x = 1 m in y
-    plt.grid(True)
-    plt.show()
+
