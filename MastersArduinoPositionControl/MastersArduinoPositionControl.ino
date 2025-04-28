@@ -53,12 +53,6 @@ void setup() {
 
   //----setup Serial comms
   Serial.begin(115200);
-  // while(!Serial.available()){
-  //   delay(100);
-  // }
-  // delay(50);
-  // //clear start message
-  // Serial.read();
 
   //-----Setup steppers
   //Init steppers
@@ -72,7 +66,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(LOWER_BB_PIN), lowerBBISR, RISING);
 
   //Setup Lidar
-  lidar.begin();
+  while(!lidar.begin()){
+    delay(100);
+  }
   lidar.startFilter();
   lidar.setMeasureMode(lidar.eLidar07Single);
 
@@ -138,7 +134,7 @@ void processSerial(){
       fireProjectile();
       break;
     case CMD_GET_LIDAR:
-      //getLidar(&val);
+      getLidar(&val);
       break;
   }
   //After Action, echo command and value as acknowledgment
