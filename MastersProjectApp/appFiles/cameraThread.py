@@ -16,6 +16,8 @@ class ImagingThread(QThread):
     imageHeight = 1080
     imageWidthResized = 640
     imageHeightResized = 480
+    correctionFactor_x = 1.75
+    correctionFactor_y = 0.5
     #globally accessed variables
     running = False
     cameraNum = 0
@@ -86,8 +88,8 @@ class ImagingThread(QThread):
         DPPY = cls.cameraFovY / cls.imageHeightResized
         xPxFromCenter = xyPx[0] - (cls.imageWidthResized/2)
         yPxFromCenter = xyPx[1] - (cls.imageHeightResized/2)
-        xDegFromCenter = xPxFromCenter * DPPX
-        yDegFromCenter = yPxFromCenter * DPPY
+        xDegFromCenter = xPxFromCenter * DPPX *cls.correctionFactor_x
+        yDegFromCenter = yPxFromCenter * DPPY *cls.correctionFactor_y
         return np.array([xDegFromCenter, yDegFromCenter])
         
     @classmethod
