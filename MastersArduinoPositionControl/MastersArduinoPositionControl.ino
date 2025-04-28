@@ -217,9 +217,9 @@ void lowerBBISR(){
 void lowerMotorClearance(){
   //check direction moving when interrupt occured
   if(lowerClockwise){
-    lowerStepper.move(LOWER_CLEARANCE_DEG * lowerDTS);
+    lowerStepper.move( (-1) * LOWER_CLEARANCE_DEG * lowerDTS);
   }else{
-    lowerStepper.move(-1 * LOWER_CLEARANCE_DEG * lowerDTS);
+    lowerStepper.move(LOWER_CLEARANCE_DEG * lowerDTS);
   }
   //should be clear now, reset flag
   bbLowerFlag = false;
