@@ -230,15 +230,19 @@ class MyApp(QtWidgets.QMainWindow):
         self.TerminalScroller.setObjectName("TerminalScroller")
         self.TerminalScroller.setReadOnly(True)
         self.verticalLayout_2.addWidget(self.TerminalScroller)
+
         #-------------------MENU BAR
         self.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(self)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 597, 26))
         self.menubar.setObjectName("menubar")
         self.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(self)
-        self.statusbar.setObjectName("statusbar")
-        self.setStatusBar(self.statusbar)
+        #-----------------status bar
+        self.angleStatusBar = QtWidgets.QStatusBar(self)
+        self.angleStatusBar.setObjectName("AngleStatusbar")
+        self.angleLabel = QtWidgets.QLabel(f"Upper Angle: {self.upperAngleHold}")
+        self.angleStatusBar.addPermanentWidget(self.angleLabel)
+        self.setStatusBar(self.angleStatusBar)
 
         #Signal functions
         self.ConnectCameraButton.clicked.connect(self.toggleCamera)
@@ -336,6 +340,10 @@ class MyApp(QtWidgets.QMainWindow):
     def terminalDebugger(self, message : str):
         self.TerminalScroller.append(message)
 
+    #update angle status bar value
+    def updateAngleStatus(self):
+        self.angleLabel.setText(f"Upper Angle: {self.upperAngleHold}")
+
     #Set image, called on internal signal interrupt
     @Slot(QImage)
     def setImage(self,image):
@@ -380,6 +388,8 @@ class MyApp(QtWidgets.QMainWindow):
         self.messageArduino(0,0)
         ##Arduino connected begin physical setup
         self.upperAngleHold = self.OOBangleLow
+        ##update status bar
+        self.updateAngleStatus()
 
     #refresh the communication connections combo box
     def updateComCombo(self):
@@ -575,11 +585,18 @@ class MyApp(QtWidgets.QMainWindow):
         #Flip direction if required
         if FLIP_Y_MOTION:
             angle = angle * -1
+        #flag clockwise or counter cw
+        self.upperRotDown = angle < 0
         #Apply angle correction multiplier
         angle = angle * ANGLE_CORRECTION_UPPER
         #send arduino command
         ret = self.messageArduino(AC.COMMAND_MOVE_UPPER, int(angle / AC.DEG_DECIMAL_SHIFT))
         self.yMotion = True #flag motors in motion
+        #Update current angle position
+        self.upperAngleHold = self.upperAngleHold + angle
+        print(f"upper angle moved: {angle}")
+        print(f"upper angle total: {self.upperAngleHold}")
+        self.updateAngleStatus()
 
         
     #Called upon each new image when tracking is enabled
