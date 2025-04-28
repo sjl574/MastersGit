@@ -3,9 +3,6 @@
 #include "DFRobot_LIDAR07.h"
 #include "Servo.h"
 
-//pin13 test led
-#define LED_PIN 13
-void flashLED(uint32_t flashes = 5);
 
 //Create stepper motor driver instances
 BasicStepperDriver upperStepper(UPPER_MOTOR_SPR, UPPER_DIR_PIN, UPPER_STEP_PIN);
@@ -49,8 +46,6 @@ void setup() {
   //servo, do to stop servo motion
   firingServo.attach(FIRING_SERVO_PIN);
   firingServo.write(0);
-  //debug led
-  pinMode(LED_PIN, OUTPUT);
   //beam break interrupts
   pinMode(UPPER_BB_PIN, INPUT);
   pinMode(LOWER_BB_PIN, INPUT);
@@ -58,11 +53,12 @@ void setup() {
 
   //----setup Serial comms
   Serial.begin(115200);
-  while(!Serial.available()){
-    delay(100);
-  }
-  //clear start message
-  Serial.read();
+  // while(!Serial.available()){
+  //   delay(100);
+  // }
+  // delay(50);
+  // //clear start message
+  // Serial.read();
 
   //-----Setup steppers
   //Init steppers
@@ -76,15 +72,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(LOWER_BB_PIN), lowerBBISR, RISING);
 
   //Setup Lidar
-  if(!lidar.begin()){
-    flashLED(0);
-    while(1);
-  }
+  lidar.begin();
   lidar.startFilter();
   lidar.setMeasureMode(lidar.eLidar07Single);
-
-  //delay as interrupts tend to self trigger on boot
-  delay(500);
 
   //Motor boot sequence (loads axis into start position relative to bb sensors)
   motorBootSequence();
@@ -97,6 +87,8 @@ void loop() {
   int32_t const UPPER_OOB = CMD_MOTOR_UPPER_OOB;
   int32_t const LOWER_OOB = CMD_MOTOR_LOWER_OOB;
   int32_t const nullVal = 0x00;
+  //clear any serial messages recieved too early
+  Serial.read();
   //main loop
   while(1){
     //check serial comms for message
@@ -269,26 +261,6 @@ void getLidar(int32_t* valPtr){
 }
 
 
-//---------------------OTHER
-
-//flash onboard led, if flashes set to 0, will flash indefinetly
-void flashLED(uint32_t flashes = 5){
-  if(!flashes){
-    while(1){
-      digitalWrite(LED_PIN, HIGH);
-      delay(300);
-      digitalWrite(LED_PIN, LOW);
-      delay(300);
-    }
-  }else{
-    for(uint32_t i = 0; i < flashes; i++){
-      digitalWrite(LED_PIN, HIGH);
-      delay(300);
-      digitalWrite(LED_PIN, LOW);
-      delay(300);
-    }
-  }
-}
 
 
 

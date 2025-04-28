@@ -367,11 +367,14 @@ class MyApp(QtWidgets.QMainWindow):
         if not self.arduinoConnected:
             self.TerminalScroller.append("Attempting Arduino Serial Connection...")
             try:
-                self.startArduinoComms()
-                self.TerminalScroller.append(f"Arduino Connected Successfully!")
                 self.terminalDebugger("Please Wait... System Booting...")
+                self.startArduinoComms()
                 self.ConnectArduinoButton.setText(QtCore.QCoreApplication.translate("self", "Disconnect Arduino"))
                 self.arduinoConnected = True
+                #wake arduino
+                time.sleep(0.1)
+                self.ardCom.wakeArduino()
+                self.TerminalScroller.append(f"Arduino Connected Successfully!")
             except Exception as e:
                 self.TerminalScroller.append(f"Failed to Connect Arduino!! \nError: {e}")
         else:
@@ -383,9 +386,6 @@ class MyApp(QtWidgets.QMainWindow):
                 self.arduinoConnected = False
             except Exception as e:
                 self.TerminalScroller.append(f"Failed to disconnect Arduino!! \nError: {e}")
-        ##send message to arduino to wake
-        time.sleep(3)
-        self.messageArduino(0,0)
         ##Arduino connected begin physical setup
         self.upperAngleHold = self.OOBangleLow
         ##update status bar
@@ -581,6 +581,7 @@ class MyApp(QtWidgets.QMainWindow):
     def moveMotorY(self, angle):
         #Dont send signal if already in / awaiting motion
         if self.yMotion:
+            print("Tried to move but already moving")
             return
         #Flip direction if required
         if FLIP_Y_MOTION:
@@ -594,8 +595,6 @@ class MyApp(QtWidgets.QMainWindow):
         self.yMotion = True #flag motors in motion
         #Update current angle position
         self.upperAngleHold = self.upperAngleHold + angle
-        print(f"upper angle moved: {angle}")
-        print(f"upper angle total: {self.upperAngleHold}")
         self.updateAngleStatus()
 
         

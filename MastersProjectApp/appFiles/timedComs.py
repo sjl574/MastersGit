@@ -43,6 +43,15 @@ class ArduinoTimedComs():
             self.serial.close()
             self.connected = False
 
+    #Send arduino wake command over serial
+    def wakeArduino(self):
+        self.sending = True
+        if not self.connected:
+            self.debugFunc(f"Failed To Wake Arduino: Not Connected")
+            return
+        self.serial.write(bytearray(0))
+        self.sending = False
+
     #Serial polling function
     def checkSerialInput(self):
         if not self.sending:
@@ -55,12 +64,12 @@ class ArduinoTimedComs():
 
     #Send message to arduino
     def message(self, command : int, data : int = 0) -> None:
-        #Wrap function to protect from interrupt
-        self.sending = True
         #inform of error, ret None if arduino not connected
         if not self.connected:
             self.debugFunc(f"Failed To Send Arduino Message: Connection Not Established")
             return
+        #Wrap function to protect from interrupt
+        self.sending = True
         #combine command byte and data into into serial of bytes
         message = bytearray()
         message.extend(command.to_bytes(4, 'little', signed = True))
