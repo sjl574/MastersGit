@@ -588,7 +588,6 @@ class MyApp(QtWidgets.QMainWindow):
     def moveMotorY(self, angle):
         #Dont send signal if already in / awaiting motion
         if self.yMotion:
-            print("Tried to move but already moving")
             return
         #Flip direction if required
         if FLIP_Y_MOTION:
