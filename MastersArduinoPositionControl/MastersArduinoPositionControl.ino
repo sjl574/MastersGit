@@ -46,17 +46,23 @@ void setup() {
   //Motor relay (do first as it will start high)
   pinMode(FIRING_MOTOR_PIN, OUTPUT);
   digitalWrite(FIRING_MOTOR_PIN, LOW);
+  //servo, do to stop servo motion
+  firingServo.attach(FIRING_SERVO_PIN);
+  firingServo.write(0);
   //debug led
   pinMode(LED_PIN, OUTPUT);
   //beam break interrupts
   pinMode(UPPER_BB_PIN, INPUT);
   pinMode(LOWER_BB_PIN, INPUT);
-  firingServo.attach(FIRING_SERVO_PIN);
-  firingServo.write(0);
+
 
   //----setup Serial comms
   Serial.begin(115200);
-  while(!Serial);
+  while(!Serial.available()){
+    delay(100);
+  }
+  //clear start message
+  Serial.read();
 
   //-----Setup steppers
   //Init steppers
@@ -240,18 +246,16 @@ void upperMotorClearance(){
 
 //Pulls motors into central positions
 void motorBootSequence(void){
-  //reset upper
-  moveUpper(-20.0);  
+  //reset both axis to endstop position
+  moveUpper(-90.0); 
+  moveLower(90.0);
+  //Flags will have been set so ISR will ignore them
   moveUpper(UPPER_CLEARANCE_DEG);
-  //reset lower
-  moveLower(20.0);
-  moveLower(-90.0);
-  //Clear flags that would have been set from collisions
+  moveLower(-LOWER_CLEARANCE_DEG);
+  //Reset flags so ISR will stop next obstruction
   bbUpperFlag = false;
   bbLowerFlag = false;
 }
-
-
 
 
 //---------------------LIDAR FUNCTIONS

@@ -30,6 +30,7 @@ from appFiles.projectileMotion import ProjectileMotion
 import matplotlib.pyplot as plt
 import appFiles.arduinoCommands as AC
 import json
+import time
 
 #Toggle debug here to send debug messages to serial
 DEBUG = True
@@ -83,8 +84,11 @@ class MyApp(QtWidgets.QMainWindow):
         self.yMinAngle = 1
         self.xMotion = False
         self.yMotion = False
-        self.upperAngleHold = -45
-        self.OOBangle = -45
+        self.OOBangleLow = -35
+        self.OOBangleHigh = 35
+        self.upperAngleHold = self.OOBangleLow
+        self.upperRotDown = True
+        self.upperAngleLim = 45
         self.lidarVal = 0
         self.awaitingLidar = False
         self.projMotion = ProjectileMotion()
@@ -357,6 +361,7 @@ class MyApp(QtWidgets.QMainWindow):
             try:
                 self.startArduinoComms()
                 self.TerminalScroller.append(f"Arduino Connected Successfully!")
+                self.terminalDebugger("Please Wait... System Booting...")
                 self.ConnectArduinoButton.setText(QtCore.QCoreApplication.translate("self", "Disconnect Arduino"))
                 self.arduinoConnected = True
             except Exception as e:
@@ -370,6 +375,11 @@ class MyApp(QtWidgets.QMainWindow):
                 self.arduinoConnected = False
             except Exception as e:
                 self.TerminalScroller.append(f"Failed to disconnect Arduino!! \nError: {e}")
+        ##send message to arduino to wake
+        time.sleep(3)
+        self.messageArduino(0,0)
+        ##Arduino connected begin physical setup
+        self.upperAngleHold = self.OOBangleLow
 
     #refresh the communication connections combo box
     def updateComCombo(self):
@@ -477,7 +487,10 @@ class MyApp(QtWidgets.QMainWindow):
             self.terminalDebugger(f"LIDAR RECIEVED: {value}mm")
         elif command == AC.COMMAND_UPPER_OOB:
             self.terminalDebugger(f"UPPER Out Of Bounds!")
-            self.upperAngleHold = self.OOBangle
+            if self.upperRotDown:
+                self.upperAngleHold = self.OOBangleLow
+            else:
+                self.upperAngleHold = self.OOBangleHigh
         elif command == AC.COMMAND_LOWER_OOB:
             self.terminalDebugger(f"LOWER Out Of Bounds!")
 
@@ -556,8 +569,6 @@ class MyApp(QtWidgets.QMainWindow):
         self.xMotion = True #Flag motors in motion
 
     def moveMotorY(self, angle):
-        #Record motion
-        self.upperAngleHold += angle
         #Dont send signal if already in / awaiting motion
         if self.yMotion:
             return
