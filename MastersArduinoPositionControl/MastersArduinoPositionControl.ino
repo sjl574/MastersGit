@@ -8,8 +8,8 @@
 BasicStepperDriver upperStepper(UPPER_MOTOR_SPR, UPPER_DIR_PIN, UPPER_STEP_PIN);
 BasicStepperDriver lowerStepper(LOWER_MOTOR_SPR, LOWER_DIR_PIN, LOWER_STEP_PIN);
 //constants
-const int32_t upperDTS = int32_t( (UPPER_AXIS_FLIP) * UPPER_GR * (UPPER_MOTOR_SPR * UPPER_MICROSTEPS) / 360.0 );
-const int32_t lowerDTS = int32_t( (LOWER_AXIS_FLIP) * LOWER_GR * (LOWER_MOTOR_SPR * LOWER_MICROSTEPS) / 360.0 );
+const int32_t upperDTS = int32_t( UPPER_CF * (UPPER_AXIS_FLIP) * UPPER_GR * (UPPER_MOTOR_SPR * UPPER_MICROSTEPS) / 360.0 );
+const int32_t lowerDTS = int32_t( (-1) * LOWER_CF * (LOWER_AXIS_FLIP) * LOWER_GR * (LOWER_MOTOR_SPR * LOWER_MICROSTEPS) / 360.0 );
 
 
 //flags
@@ -191,7 +191,7 @@ void moveLower(float deg){
     lowerClockwise = false;
   }
   //Move motor
-  lowerStepper.move(deg * upperDTS);
+  lowerStepper.move(deg * lowerDTS);
 }
 
 //Interrupt serivce routines for motor limit reaches
@@ -240,10 +240,10 @@ void upperMotorClearance(){
 void motorBootSequence(void){
   //reset both axis to endstop position
   moveUpper(-90.0); 
-  moveLower(90.0);
+  moveLower(180.0);
   //Flags will have been set so ISR will ignore them
-  moveUpper(UPPER_CLEARANCE_DEG);
-  moveLower(-LOWER_CLEARANCE_DEG);
+  moveUpper(UPPER_BOOT_DEG);
+  moveLower(-LOWER_BOOT_DEG);
   //Reset flags so ISR will stop next obstruction
   bbUpperFlag = false;
   bbLowerFlag = false;

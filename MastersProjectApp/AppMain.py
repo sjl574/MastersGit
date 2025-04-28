@@ -40,9 +40,9 @@ arduinoBaudRate = 115200
 WINDOW_NAME = "Sam's Masters Project"
 FLIP_Y_MOTION = True
 FLIP_X_MOTION = False
-#Multipliers for angle motion
+#Multipliers for angle motion (FOR TESTING ONLY - SET PERMANENT IN SYSTEM C CODE)
 ANGLE_CORRECTION_UPPER = 1
-ANGLE_CORRECTION_LOWER = 3
+ANGLE_CORRECTION_LOWER = 1
 
 
 #subclass of QLabel to allow gathering of mouse cursor position from clicks
@@ -86,7 +86,9 @@ class MyApp(QtWidgets.QMainWindow):
         self.yMotion = False
         self.OOBangleLow = -35
         self.OOBangleHigh = 35
-        self.upperAngleHold = self.OOBangleLow
+        self.lowerAngleHold = 0
+        self.upperResetAngle = 0
+        self.upperAngleHold = self.upperResetAngle
         self.upperRotDown = True
         self.upperAngleLim = 45
         self.lidarVal = 0
@@ -387,7 +389,7 @@ class MyApp(QtWidgets.QMainWindow):
             except Exception as e:
                 self.TerminalScroller.append(f"Failed to disconnect Arduino!! \nError: {e}")
         ##Arduino connected begin physical setup
-        self.upperAngleHold = self.OOBangleLow
+        self.upperAngleHold = self.upperResetAngle
         ##update status bar
         self.updateAngleStatus()
 
@@ -503,6 +505,8 @@ class MyApp(QtWidgets.QMainWindow):
                 self.upperAngleHold = self.OOBangleHigh
         elif command == AC.COMMAND_LOWER_OOB:
             self.terminalDebugger(f"LOWER Out Of Bounds!")
+        #Update angle status (most commands need this )
+        self.updateAngleStatus()
 
     #--------------------PHYSICAL ACTION COMMANDS
 
@@ -577,6 +581,9 @@ class MyApp(QtWidgets.QMainWindow):
         #Send arduino command
         ret = self.messageArduino(AC.COMMAND_MOVE_LOWER, int(angle / AC.DEG_DECIMAL_SHIFT))
         self.xMotion = True #Flag motors in motion
+        ##DEBUG LOWER ANGLE
+        self.lowerAngleHold += angle
+        print(f"Lower Angle: {self.lowerAngleHold}")
 
     def moveMotorY(self, angle):
         #Dont send signal if already in / awaiting motion

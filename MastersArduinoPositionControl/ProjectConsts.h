@@ -14,25 +14,30 @@
 #define LOWER_MICROSTEPS 8
 //GEARING RATIO
 #define UPPER_GR 2
-#define LOWER_GR 2
+#define LOWER_GR 3
+//Correction factors
+#define UPPER_CF 1.125
+#define LOWER_CF 0.72
 //Speed 
 #define UPPER_MAX_RPM 100
-#define LOWER_MAX_RPM 50
+#define LOWER_MAX_RPM 75
 #define UPPER_DEFAULT_RPM 40
-#define LOWER_DEFAULT_RPM 40
+#define LOWER_DEFAULT_RPM 75
 //Acceleration
 #define UPPER_MAX_ACCEL 50
-#define LOWER_MAX_ACCEL 100
+#define LOWER_MAX_ACCEL 50
 #define UPPER_DEFAULT_ACCEL 50
-#define LOWER_DEFAULT_ACCEL 50
+#define LOWER_DEFAULT_ACCEL 30
 //Pins
 #define UPPER_DIR_PIN 13
 #define UPPER_STEP_PIN 12
 #define LOWER_DIR_PIN 11
 #define LOWER_STEP_PIN 10
 //Clearnace distance
-#define LOWER_CLEARANCE_DEG 50
+#define LOWER_CLEARANCE_DEG 20
 #define UPPER_CLEARANCE_DEG 10
+#define LOWER_BOOT_DEG 90
+#define UPPER_BOOT_DEG 45
 //Axis Flip (set to -1 for flip or 1 for not flip)
 #define UPPER_AXIS_FLIP -1
 #define LOWER_AXIS_FLIP 1
