@@ -582,8 +582,8 @@ class MyApp(QtWidgets.QMainWindow):
         ret = self.messageArduino(AC.COMMAND_MOVE_LOWER, int(angle / AC.DEG_DECIMAL_SHIFT))
         self.xMotion = True #Flag motors in motion
         ##DEBUG LOWER ANGLE
-        self.lowerAngleHold += angle
-        print(f"Lower Angle: {self.lowerAngleHold}")
+        # self.lowerAngleHold += angle
+        # print(f"Lower Angle: {self.lowerAngleHold}")
 
     def moveMotorY(self, angle):
         #Dont send signal if already in / awaiting motion
