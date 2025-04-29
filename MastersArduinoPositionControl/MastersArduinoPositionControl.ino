@@ -46,6 +46,10 @@ void setup() {
   //servo, do to stop servo motion
   firingServo.attach(FIRING_SERVO_PIN);
   firingServo.write(0);
+  //wait for motors to calm down to prevent interference with other pins
+  delay(1500);
+
+
   //beam break interrupts
   pinMode(UPPER_BB_PIN, INPUT);
   pinMode(LOWER_BB_PIN, INPUT);
