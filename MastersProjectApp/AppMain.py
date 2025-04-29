@@ -541,26 +541,46 @@ class MyApp(QtWidgets.QMainWindow):
 
     #Calculates projectile motion without drag then fires
     def fireProjectileNoDrag(self):
+        #Disable tracking
+        self.tracking = False
         #Get IR Distance
         self.getLidarFunc()
+        self.awaitingLidar = True
         while self.awaitingLidar:
-            None #wait for lidar
+            time.sleep(0.1) #wait for lidar
         #Update projectile motion calculator
-        self.projMotion.targetDistance = self.lidarVal
-        #Func needed for getting angle required from target distance (no drag)
+        requiredAngle, _ = self.projMotion.calculateAngle(self.lidarVal/1000, self.upperAngleHold, False)
+        requiredMotion = requiredAngle - self.upperAngleHold
+        #Move required amount
+        self.moveMotorY(requiredMotion)
+        #Fire projectile
         self.TerminalScroller.append("Firing Projectile!")
         self.messageArduino(AC.COMMAND_FIRE, 6)
+        #Show trajectory esimation
+        self.projMotion.launchDegrees = requiredAngle
+        self.projMotion.plotMPL(self.projMotion.getNoDragMotion()[0], targetDistance=self.lidarVal, targetAngle = requiredAngle)
 
     #calculates projectile motion with drag then fires
     def fireProjectileDrag(self):
+        #Disable tracking
+        self.tracking = False
+        #Get IR Distance
         self.getLidarFunc()
+        self.awaitingLidar = True
         while self.awaitingLidar:
-            None #wait for lidar
+            time.sleep(0.1) #wait for lidar
         #Update projectile motion calculator
-        self.projMotion.targetDistance = self.lidarVal
-        #Func needed for getting angle required from target distance (with drag)
+        requiredAngle, _ = self.projMotion.calculateAngle(self.lidarVal/1000, self.upperAngleHold, True)
+        requiredMotion = requiredAngle - self.upperAngleHold
+        #Move required amount
+        self.moveMotorY(requiredMotion)
+        #Fire projectile
         self.TerminalScroller.append("Firing Projectile!")
         self.messageArduino(AC.COMMAND_FIRE, 6)
+        #Show trajectory esimation
+        self.projMotion.launchDegrees = requiredAngle
+        self.projMotion.plotMPL(self.projMotion.getDragMotion()[0], targetDistance=self.lidarVal, targetAngle = requiredAngle)
+
 
     #Retrieve current lidar distance from arduino
     def getLidarFunc(self):

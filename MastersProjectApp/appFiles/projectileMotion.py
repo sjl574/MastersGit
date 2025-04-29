@@ -248,7 +248,7 @@ class ProjectileMotion:
         return targetDistance * np.array([math.cos(math.radians(targetAngle)), math.sin(math.radians(targetAngle))])  
 
     #Plot figure using matplotlib
-    def plotMPL(self, xyResults, show = True, newFig = False, markType = 'o'):
+    def plotMPL(self, xyResults, show = True, newFig = False, markType = 'o', targetAngle = None, targetDistance = None):
         #Clear figure if new
         if newFig:
             plt.clf()
@@ -261,6 +261,9 @@ class ProjectileMotion:
         plt.title('Object trajectory')
         plt.axis('equal')              # equal aspect ratio so 1 m in x = 1 m in y
         plt.grid(True)
+        if targetAngle is not None and targetDistance is not None:
+            targetX, targetY = self.getTargetCoords(targetDistance, targetAngle)
+            plt.scatter(targetX, targetY, color='green', label='Target', s=300, marker = 'x',  zorder=5)
         if show == True:
             plt.show()
         
@@ -293,12 +296,10 @@ if __name__ == "__main__":
 
     #Find and plot trajectory to hit target compensating for drag
     def dragExample():
-        targetX, targetY = motioncal.getTargetCoords(2, 20)
         theta = motioncal.calculateAngle(2,20,True)
         print(f"DRAG ANGLE: {theta}")
         motioncal.launchDegrees = theta
-        plt.scatter(targetX, targetY, color='green', label='Target', s=300, marker = 'x',  zorder=5)
-        motioncal.plotMPL(motioncal.getNoDragMotion()[0], True)
+        motioncal.plotMPL(motioncal.getNoDragMotion()[0], True, targetDistance = 2, targetAngle = 20)
 
     dragExample()
 
