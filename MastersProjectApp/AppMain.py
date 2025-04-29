@@ -629,7 +629,7 @@ class MyApp(QtWidgets.QMainWindow):
         #Set tracking in motion to say function is occupied
         self.trackingInMotion = True
         #only move if angle is big enough to stop constant tiny adjustments
-        xyPixels = self.cameraThread.getPartPixels("Nose")
+        xyPixels = self.cameraThread.getChestPixels()
         if xyPixels is not None:
             xyAngles = self.cameraThread.pxToAngle(xyPixels)
             if (xyAngles[0] * xyAngles[0]) > self.xMinAngle:
@@ -638,7 +638,6 @@ class MyApp(QtWidgets.QMainWindow):
                 self.moveMotorY(xyAngles[1])
         #Turn off tracking in motion to allow next track command
         self.trackingInMotion = False
-
 
 
     #-----------------Camera Functions

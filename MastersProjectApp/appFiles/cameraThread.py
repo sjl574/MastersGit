@@ -65,17 +65,38 @@ class ImagingThread(QThread):
     def getResults(self):
         return self.results
     
-    #obtain nose pixels
+    #obtain pixel position of key part via string identifier
     def getPartPixels(self, partKey : str):
-        if self.results is not None:
-            normedPx = detector.getPartResultByKey(partKey, self.results)
-            if normedPx is not None:
-                pixels = self.normedToPx(normedPx)
-                if not pixels.all():
-                    return None
-                return pixels
-        return None
-        
+        #ensure results exist
+        if self.results is None:
+            return None
+        #Get parts and ensure that part was detected
+        normedPx = detector.getPartResultByKey(partKey, self.results)
+        if normedPx is None:
+            return None
+        #Convert norm to image px coordinates
+        pixels = self.normedToPx(normedPx)
+        if not pixels.all():
+            return None
+        #ret pixel location
+        return pixels
+    
+    #Obtain pixel position of chest (not a key part, calculated by mid shoulder position)
+    def getChestPixels(self):
+        #Check results exist
+        if self.results is None:
+            return None
+        #get shoulder px locations
+        leftShoulderPx = self.getPartPixels("Left Shoulder")
+        rightShoulderPx = self.getPartPixels("Right Shoulder")
+        #Check parts exist
+        if (leftShoulderPx is None) or (rightShoulderPx is None):
+            return None
+        #Find midpoint
+        chestPx = np.array([(leftShoulderPx[0] + rightShoulderPx[0])/2, (leftShoulderPx[1] + rightShoulderPx[1])/2])
+        #Return
+        return chestPx
+
     @classmethod
     def normedToPx(cls, xyNormed) -> np.ndarray:
         imgSize = np.array([cls.imageWidthResized, cls.imageHeightResized])
