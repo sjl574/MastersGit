@@ -140,9 +140,17 @@ class MyApp(QtWidgets.QMainWindow):
         self.ToggleTrackingButton.setObjectName("ToggleTracking")
         self.verticalLayout_3.addWidget(self.ToggleTrackingButton)
         #place fire projectile button
-        self.FireProjectButton = QtWidgets.QPushButton(self.gridLayoutWidget)
-        self.FireProjectButton.setObjectName("FireProjectButton")
-        self.verticalLayout_3.addWidget(self.FireProjectButton)
+        self.BasicFireButton = QtWidgets.QPushButton(self.gridLayoutWidget)
+        self.BasicFireButton.setObjectName("BasicFireButton")
+        self.verticalLayout_3.addWidget(self.BasicFireButton)
+        #place fire projectile button
+        self.ProjectileFireButton = QtWidgets.QPushButton(self.gridLayoutWidget)
+        self.ProjectileFireButton.setObjectName("ProjectileFireButton")
+        self.verticalLayout_3.addWidget(self.ProjectileFireButton)
+        #place fire projectile button
+        self.DragFireButton = QtWidgets.QPushButton(self.gridLayoutWidget)
+        self.DragFireButton.setObjectName("DragFireButton")
+        self.verticalLayout_3.addWidget(self.DragFireButton)
         #Place show trajectory button
         self.ShowTrajectoryButton = QtWidgets.QPushButton(self.gridLayoutWidget)
         self.ShowTrajectoryButton.setObjectName("ShowTrajectoryButton")
@@ -250,7 +258,9 @@ class MyApp(QtWidgets.QMainWindow):
         self.ConnectCameraButton.clicked.connect(self.toggleCamera)
         self.ConnectArduinoButton.clicked.connect(self.connectArduinoFunc)
         self.ToggleTrackingButton.clicked.connect(self.toggleTrackingFunc)
-        self.FireProjectButton.clicked.connect(self.fireProjectButtonFunc)
+        self.BasicFireButton.clicked.connect(self.fireProjectileBasic)
+        self.ProjectileFireButton.clicked.connect(self.fireProjectileNoDrag)
+        self.DragFireButton.clicked.connect(self.fireProjectileDrag)
         self.ApplySettings.clicked.connect(self.applySettingsFunc)
         self.refreshComButton.clicked.connect(self.updateComCombo)
         self.imageLabel.clicked.connect(self.imageClickFunc)
@@ -312,7 +322,9 @@ class MyApp(QtWidgets.QMainWindow):
         self.setWindowTitle(_translate(WINDOW_NAME, WINDOW_NAME))
         self.ConnectCameraButton.setText(_translate(WINDOW_NAME, "Connect Camera"))
         self.ConnectArduinoButton.setText(_translate(WINDOW_NAME, "Connect Arduino"))
-        self.FireProjectButton.setText(_translate(WINDOW_NAME, "Fire Projectile"))
+        self.BasicFireButton.setText(_translate(WINDOW_NAME, "Basic Shoot"))
+        self.ProjectileFireButton.setText(_translate(WINDOW_NAME, "Projectile Shoot"))
+        self.DragFireButton.setText(_translate(WINDOW_NAME, "Drag Shoot"))
         self.ToggleTrackingButton.setText(_translate("MainWindow", "Toggle Tracking"))
         self.ShowTrajectoryButton.setText(_translate(WINDOW_NAME, "Show Trajectory"))
         self.GetLidarButton.setText(_translate(WINDOW_NAME, "Get Distance"))
@@ -522,18 +534,6 @@ class MyApp(QtWidgets.QMainWindow):
             self.ToggleTrackingButton.setText(QtCore.QCoreApplication.translate("self", "Start Tracking"))
             self.tracking = False         
 
-    #send fire projectile command to arduino
-    def fireProjectButtonFunc(self):
-        self.TerminalScroller.append("Firing Projectile!")
-        ###...
-        #Need to create full firing calculator, should
-        #request ir distance, waiting for reply
-        #calculate trigonmetry
-        #calculate drag
-        #move upwards in accordance to drag, trig, etc to hit currently facing target
-        #fire projectile
-        self.messageArduino(AC.COMMAND_FIRE, 6)
-
     #Simply shoots projectile, no compensation
     def fireProjectileBasic(self):
         self.TerminalScroller.append("Firing Projectile!")
@@ -546,8 +546,12 @@ class MyApp(QtWidgets.QMainWindow):
         #Get IR Distance
         self.getLidarFunc()
         self.awaitingLidar = True
-        while self.awaitingLidar:
+        startTime = time.time()
+        while self.awaitingLidar and (time.time() < startTime + 3):
             time.sleep(0.1) #wait for lidar
+        if self.awaitingLidar:
+            self.terminalDebugger("TIMEOUT! - Failed to obtain lidar distance in time")
+            return None
         #Update projectile motion calculator
         requiredAngle, _ = self.projMotion.calculateAngle(self.lidarVal/1000, self.upperAngleHold, False)
         requiredMotion = requiredAngle - self.upperAngleHold
@@ -567,8 +571,12 @@ class MyApp(QtWidgets.QMainWindow):
         #Get IR Distance
         self.getLidarFunc()
         self.awaitingLidar = True
-        while self.awaitingLidar:
+        startTime = time.time()
+        while self.awaitingLidar and (time.time() < startTime + 3):
             time.sleep(0.1) #wait for lidar
+        if self.awaitingLidar:
+            self.terminalDebugger("TIMEOUT! - Failed to obtain lidar distance in time")
+            return None
         #Update projectile motion calculator
         requiredAngle, _ = self.projMotion.calculateAngle(self.lidarVal/1000, self.upperAngleHold, True)
         requiredMotion = requiredAngle - self.upperAngleHold
